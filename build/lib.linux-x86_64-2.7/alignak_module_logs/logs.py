@@ -32,8 +32,9 @@ from logging.handlers import TimedRotatingFileHandler
 
 from alignak.basemodule import BaseModule
 
-logger = logging.getLogger('alignak.module')
+logger = logging.getLogger('alignak.module')  # pylint: disable=C0103
 
+# pylint: disable=C0103
 properties = {
     'daemons': ['broker'],
     'type': 'logs',
