@@ -1,0 +1,13 @@
+# Python requirements for unit tests
+-r ../requirements.txt
+# alignak
+-e git+https://github.com/Alignak-monitoring/alignak.git@develop#egg=alignak
+
+unittest2
+coveralls==0.5
+nose-cov==1.6
+coverage==3.7.1
+nose==1.3.7
+pylint==1.5.4
+pep8==1.5.7
+pep257

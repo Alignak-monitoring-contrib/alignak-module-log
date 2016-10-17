@@ -9,10 +9,10 @@ __pkg_name__ = u"alignak_module_logs"
 # Module type for PyPI keywords
 # Used for:
 # - PyPI keywords
-__module_type__ = u"broker"
+__module_types__ = u"logs"
 
 # Application manifest
-__version__ = u"0.1.0"
+__version__ = u"0.2.1"
 __author__ = u"Alignak team"
 __author_email__ = u"frederic.mohier@siprossii.com"
 __copyright__ = u"(c) 2015-2016 - %s" % __author__

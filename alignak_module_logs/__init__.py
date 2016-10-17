@@ -1,10 +1,8 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
 #
-# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2016: Alignak contrib team, see AUTHORS.txt file for contributors
 #
-# This file is part of Alignak.
+# This file is part of Alignak contrib projet.
 #
 # Alignak is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published by
@@ -20,9 +18,9 @@
 # along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-This package contains the NSCA collector module.
+This module is an Alignak Broker module that collects the `monitoring_log` broks to send
+them to a Python logger configured in the module configuration file
 """
 
 # the properties and get_instance must be available from the top-level:
 from .logs import properties, get_instance
-

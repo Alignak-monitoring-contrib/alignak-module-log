@@ -56,5 +56,5 @@ Please report any issue using the project `GitHub repository: <https://github.co
 License
 -------
 
-Alignak Backend Modules is available under the `GPL version 3 <http://opensource.org/licenses/GPL-3.0>`_.
+Alignak Logs module is available under the `GPL version 3 <http://opensource.org/licenses/GPL-3.0>`_.
 

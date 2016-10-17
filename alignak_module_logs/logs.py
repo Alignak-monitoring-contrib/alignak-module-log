@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2015: Alignak contrib team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2016: Alignak contrib team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak contrib projet.
 #
@@ -16,8 +16,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
-#
-#
+
 """
 This module is an Alignak Broker module that collects the `monitoring_log` broks to send
 them to a Python logger configured in the module configuration file
@@ -29,6 +28,7 @@ import time
 import logging
 from logging import Formatter
 from logging.handlers import TimedRotatingFileHandler
+from logging.config import dictConfig as logger_dictConfig
 
 from alignak.basemodule import BaseModule
 
@@ -40,7 +40,7 @@ properties = {
     'type': 'logs',
     'external': True,
     'phases': ['running'],
-    }
+}
 
 
 def get_instance(mod_conf):
@@ -60,6 +60,7 @@ class MonitoringLogsCollector(BaseModule):
     Monitoring logs module main class
     """
     def __init__(self, mod_conf):
+        # pylint: disable=global-statement
         """
         Module initialization
 
@@ -103,6 +104,7 @@ class MonitoringLogsCollector(BaseModule):
         if self.logger_configuration:
             logger.info("logger configuration defined in %s",
                         self.logger_configuration)
+            self.default_configuration = False
             if not os.path.exists(self.logger_configuration):
                 self.default_configuration = True
                 logger.warning("defined logger configuration file does not exist! "
@@ -116,6 +118,15 @@ class MonitoringLogsCollector(BaseModule):
                         self.log_rotation_interval, self.log_rotation_when, self.log_rotation_count)
 
         self.setup_logging()
+
+    def init(self):
+        """Handle this module "post" init ; just before it'll be started.
+        Like just open necessaries file(s), database(s),
+        or whatever the module will need.
+
+        :return: None
+        """
+        return True
 
     def setup_logging(self):
         """Setup logging configuration
@@ -137,7 +148,16 @@ class MonitoringLogsCollector(BaseModule):
         else:
             with open(self.logger_configuration, 'rt') as f:
                 config = json.load(f)
-            logging.config.dictConfig(config)
+            try:
+                logger_dictConfig(config)
+            except ValueError as exp:
+                logger.error("Logger configuration file is not parsable correctly!")
+                logger.exception(exp)
+
+    def do_loop_turn(self):
+        """This function is present because of an abstract function in the BaseModule class"""
+        logger.info("In loop")
+        time.sleep(1)
 
     def manage_brok(self, b):
         """
@@ -168,7 +188,7 @@ class MonitoringLogsCollector(BaseModule):
         logger.info("starting...")
 
         while not self.interrupted:
-            logger.debug("[Logs] queue length: %s", self.to_q.qsize())
+            logger.debug("queue length: %s", self.to_q.qsize())
             start = time.time()
 
             # Get message in the queue
@@ -178,7 +198,7 @@ class MonitoringLogsCollector(BaseModule):
                 b.prepare()
                 self.manage_brok(b)
 
-            logger.debug("[Logs] time to manage %s broks (%d secs)", len(l), time.time() - start)
+            logger.debug("time to manage %s broks (%d secs)", len(l), time.time() - start)
 
         logger.info("stopping...")
 
