@@ -29,8 +29,8 @@ Build status (development release)
 Most recent release
 -------------------
 
-.. image:: https://badge.fury.io/py/alignak_module_log.svg
-    :target: https://badge.fury.io/py/alignak_module_log
+.. image:: https://badge.fury.io/py/alignak_module_logs.svg
+    :target: https://badge.fury.io/py/alignak_module_logs
 
 
 Short description
