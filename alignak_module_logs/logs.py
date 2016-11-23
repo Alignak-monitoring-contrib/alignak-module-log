@@ -168,10 +168,11 @@ class MonitoringLogsCollector(BaseModule):
         :return: None
         """
         # Ignore all except 'monitoring_log' broks...
-        if b.type in ['monitoring_log']:
+        if b.type.lower() in ['monitoring_log']:
             logger.debug("Got brok: %s - %s", b.type, b)
-            if b.data['level'].lower() in ['debug', 'info', 'warning', 'error', 'critical']:
-                func = getattr(self.logger, b.data['level'])
+            level = b.data['level'].lower()
+            if level in ['debug', 'info', 'warning', 'error', 'critical']:
+                func = getattr(self.logger, level)
                 func(b.data['message'])
 
     def main(self):
