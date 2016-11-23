@@ -57,7 +57,7 @@ Short description
 
 This module for Alignak collects the monitoring logs (alerts, notifications, ...) to log them into a dedicated file.
 
-You can plainly use the powerful of the Python logging system thanks to the use of a logging configuration file which will allow you to define when, where and how to send the monitoring logs ...
+You can plainly use the powerful of the Python logging system thanks to the use of a logging configuration file which will allow you to define when, where and how to send the monitoring logs ....
 
 Known issues
 ------------
@@ -74,6 +74,10 @@ To configure Alignak broker to use this module:
 
     - edit your broker daemon configuration file
     - add the `module_alias` parameter value (`logs`) to the `modules` parameter of the daemon
+
+To configure this module to send its log to the Alignak badckend:
+
+    - edit the module configuration file to set the Alignak backend parameters (eg. url and login information)
 
 To set up several logs collectors:
 

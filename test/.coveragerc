@@ -3,4 +3,4 @@ omit =
     */python?.?/*
     */site-packages/nose/*
 [run]
-source = alignak_module_ws
+source = alignak_module_log

@@ -44,7 +44,7 @@ class TestModules(AlignakTest):
 
     def test_module_loading(self):
         """
-        Test arbiter, broker, ... auto-generated modules
+        Test module loading
 
         Alignak module loading
 

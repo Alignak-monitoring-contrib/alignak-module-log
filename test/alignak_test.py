@@ -250,8 +250,12 @@ class AlignakTest(unittest.TestCase):
             raise
 
         for arb in self.arbiter.conf.arbiters:
-            if arb.get_name() == self.arbiter.config_name:
-                self.arbiter.myself = arb
+            if getattr(self.arbiter, 'config_name', None):
+                if arb.get_name() == self.arbiter.config_name:
+                    self.arbiter.myself = arb
+            if getattr(self.arbiter, 'arbiter_name', None):
+                if arb.get_name() == self.arbiter.arbiter_name:
+                    self.arbiter.myself = arb
         self.arbiter.dispatcher = Dispatcher(self.arbiter.conf, self.arbiter.myself)
         self.arbiter.dispatcher.prepare_dispatch()
 
