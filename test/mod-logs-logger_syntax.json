@@ -2,8 +2,8 @@
     "version": 1,
     "disable_existing_loggers": false,
     "formatters": {
-        "simple": {
-            "format": "[%(created)i] %(levelname)s: %(message)s"
+        "local": {
+            "format": "[%(asctime)s] %(levelname)s: [%(name)s] %(message)s"
         }
     },
 
@@ -11,36 +11,26 @@
         "rotating_file_handler": {
             "class": "logging.handlers.RotatingFileHandler",
             "level": "INFO",
-            "formatter": "simple",
+            "formatter": "local",
             "filename": "/tmp/rotating-monitoring.log",
             "maxBytes": 10485760,
             "backupCount": 20,
             "encoding": "utf8"
         },
-
         "timed_rotating_file_handler": {
             "class": "logging.handlers.TimedRotatingFileHandler",
             "level": "INFO",
-            "formatter": "simple",
+            "formatter": "local",
             "filename": "/tmp/timed-rotating-monitoring.log",
             "when": "midnight",
             "interval": 1,
             "backupCount": 20,
             "encoding": "utf8"
         }
-
-    },
-
-    "loggers": {
-        "alignak.module.logs": {
-            "level": "ERROR",
-            "handlers": ["console"],
-            "propagate": "no"
-        }
     },
 
     "root": {
         "level": "INFO",
-        "handlers": ["console", "info_file_handler", "error_file_handler"]
+        "handlers": ["console", "rotating_file_handler", "timed_rotating_file_handler"]
     }
 }

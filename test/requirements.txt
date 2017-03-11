@@ -6,14 +6,20 @@
 # alignak backend
 -e git+https://github.com/Alignak-monitoring-contrib/alignak-backend.git@develop#egg=alignak-backend
 
-uwsgi
+# alignak backend import
+-e git+https://github.com/Alignak-monitoring-contrib/alignak-backend-import.git@develop#egg=alignak-backend-import
 
 unittest2
-mock
-coveralls
-nose-cov
+
+# Use py.test as test-runner
+pytest
+pytest-cov
+# Let coverage use the most recent version
 coverage
-nose
+# Report coverage results to coveralls.io
+coveralls
+
+# Static code analysis libraries
 pylint
 pep8
 pep257

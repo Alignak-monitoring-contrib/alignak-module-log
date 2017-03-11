@@ -86,6 +86,10 @@ To set up several logs collectors:
     - edit your broker daemon configuration file
     - add the new `module_alias` parameter value (`logs_bis`) to the `modules` parameter of the daemon
 
+Monitoring logs configuration
+-----------------------------
+
+As a default configuration this module will create a log file for the monitoring logs. This file will be located in the alignak log directory and it will be rotated every day for a period of 365 days. You can also define your own logging strategy as it is explained in the module configuration file that is largely commented to explain how to configure.
 
 Bugs, issues and contributing
 -----------------------------
