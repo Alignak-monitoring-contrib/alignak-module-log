@@ -240,6 +240,21 @@ class TestModuleConnection(AlignakTest):
         b.prepare()
         instance.manage_brok(b)
 
+        b = Brok({'type': 'monitoring_log', 'data': {
+            'level': 'info',
+            'message': 'CURRENT SERVICE STATE: lachassagne;Zombies;'
+                       'OK;HARD;1;PROCS OK: 0 processes with STATE = Z'
+        }})
+        b.prepare()
+        instance.manage_brok(b)
+
+        b = Brok({'type': 'monitoring_log', 'data': {
+            'level': 'info',
+            'message': 'ACKNOWLEDGE_HOST_PROBLEM;pi2;2;1;1;admin;Acknowledge requested from WebUI'
+        }})
+        b.prepare()
+        instance.manage_brok(b)
+
         # Get log file that should contain one line
         with open('/tmp/rotating-monitoring.log', 'r') as f:
             data = f.readlines()
@@ -257,6 +272,10 @@ class TestModuleConnection(AlignakTest):
         assert 'SERVICE ALERT: cogny;Load;OK;HARD;4;OK - load average: 0.74, 0.89, 1.03' in data[1]
         assert 'SERVICE NOTIFICATION: admin;localhost;check-ssh;' \
                'CRITICAL;notify-service-by-email;Connection refused' in data[2]
+        assert 'CURRENT SERVICE STATE: lachassagne;Zombies;' \
+                'OK;HARD;1;PROCS OK: 0 processes with STATE = Z' in data[3]
+        assert 'ACKNOWLEDGE_HOST_PROBLEM;pi2;2;1;1;admin;' \
+               'Acknowledge requested from WebUI' in data[4]
 
         log = logs[2]
         log = log[13:]

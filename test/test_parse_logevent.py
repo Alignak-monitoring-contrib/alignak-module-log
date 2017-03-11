@@ -47,8 +47,61 @@ from alignak_module_logs.logevent import LogEvent
 
 class TestParseLogEvent(AlignakTest):
 
+    def test_comment_service(self):
+        self.maxDiff = None
+
+        log = '[1402515279] SERVICE COMMENT: pi2;load;Service comment'
+        expected = {
+            'hostname': 'pi2', 'event_type': 'COMMENT', 'service_desc': 'load',
+            'comment_type': 'SERVICE', 'time': 1402515279,
+            'output': 'Service comment'
+        }
+        event = LogEvent(log)
+        print(event)
+        assert event.data == expected
+
+    def test_ack_host(self):
+        self.maxDiff = None
+
+        log = '[1402515279] HOST COMMENT ALERT: pi2;STARTED;Host problem has been acknowledged'
+        expected = {
+            'hostname': 'pi2', 'event_type': 'COMMENT', 'service_desc': None,
+            'comment_type': 'HOST', 'time': 1402515279,
+            'output': 'Host comment'
+        }
+        event = LogEvent(log)
+        print(event)
+        assert event.data == expected
+
+    def test_ack_service(self):
+        self.maxDiff = None
+
+        log = '[1402515279] SERVICE ACKNOWLEDGE ALERT: pi2;load;STARTED;Service problem has been acknowledged'
+        expected = {
+            'hostname': 'pi2', 'event_type': 'ACKNOWLEDGE', 'service_desc': 'load',
+            'state': 'STARTED', 'ack_type': 'SERVICE', 'time': 1402515279,
+            'output': 'Service problem has been acknowledged'
+        }
+        event = LogEvent(log)
+        print(event)
+        assert event.data == expected
+
+    def test_ack_host(self):
+        self.maxDiff = None
+
+        log = '[1402515279] HOST ACKNOWLEDGE ALERT: pi2;STARTED;Host problem has been acknowledged'
+        expected = {
+            'hostname': 'pi2', 'event_type': 'ACKNOWLEDGE', 'service_desc': None,
+            'state': 'STARTED', 'ack_type': 'HOST', 'time': 1402515279,
+            'output': 'Host problem has been acknowledged'
+        }
+        event = LogEvent(log)
+        print(event)
+        assert event.data == expected
+
     def test_notification_service(self):
-        log = '[1402515279] SERVICE NOTIFICATION: admin;localhost;check-ssh;CRITICAL;notify-service-by-email;Connection refused'
+        log = '[1402515279] SERVICE NOTIFICATION: admin;localhost;check-ssh;' \
+              'CRITICAL;notify-service-by-email;Connection refused'
         expected = {
             'hostname': 'localhost',
             'event_type': 'NOTIFICATION',
@@ -166,6 +219,3 @@ class TestParseLogEvent(AlignakTest):
         }
         event = LogEvent(log)
         assert event.data == expected
-
-if __name__ == '__main__':
-    unittest.main()

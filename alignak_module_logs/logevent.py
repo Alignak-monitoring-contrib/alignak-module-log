@@ -52,7 +52,8 @@ import re
 
 EVENT_TYPE_PATTERN = \
     re.compile(
-        r'^\[[0-9]{10}] (?:HOST|SERVICE) (ALERT|NOTIFICATION|FLAPPING|DOWNTIME)(?: ALERT)?:.*'
+        r'^\[[0-9]{10}] (?:HOST|SERVICE) '
+        r'(ALERT|NOTIFICATION|FLAPPING|COMMENT|ACKNOWLEDGE|DOWNTIME)(?: ALERT)?:.*'
     )
 EVENT_TYPES = {
     'NOTIFICATION': {
@@ -89,15 +90,44 @@ EVENT_TYPES = {
             'output',  # 'WARNING - load average: 5.04, 4.67, 5.04'
         ]
     },
+    'COMMENT': {
+        # ex: "[1329144231] SERVICE COMMENT:
+        #  dfw01-is02-006;cpu load maui;Comment text"
+        'pattern': r'^\[([0-9]{10})] (HOST|SERVICE) (COMMENT): '
+                   r'([^\;]*);(?:([^\;]*);)?([^\;]*)',
+        'properties': [
+            'time',
+            'comment_type',  # 'SERVICE' (or could be 'HOST')
+            'event_type',  # 'COMMENT'
+            'hostname',  # 'localhost'
+            'service_desc',  # 'cpu load maui' (or could be None)
+            'output',  # 'WARNING - load average: 5.04, 4.67, 5.04'
+        ]
+    },
+    'ACKNOWLEDGE': {
+        # ex: "[1279250211] HOST ACKNOWLEDGE STARTED:
+        # maast64;Host has been acknowledged"
+        'pattern': r'^\[([0-9]{10})] (HOST|SERVICE) (ACKNOWLEDGE) ALERT: '
+                   r'([^\;]*);(?:([^\;]*);)?([^\;]*);([^\;]*)',
+        'properties': [
+            'time',
+            'ack_type',  # 'SERVICE' or 'HOST'
+            'event_type',  # 'ACKNOWLEDGE'
+            'hostname',  # The hostname
+            'service_desc',  # The service description or None
+            'state',  # 'STARTED' or 'EXPIRED'
+            'output',  # 'Host has been acknowledged'
+        ]
+    },
     'DOWNTIME': {
         # ex: "[1279250211] HOST DOWNTIME ALERT:
         # maast64;STARTED; Host has entered a period of scheduled downtime"
         'pattern': r'^\[([0-9]{10})] (HOST|SERVICE) (DOWNTIME) ALERT: '
-        r'([^\;]*);(?:([^\;]*);)?([^\;]*);([^\;]*)',
+                   r'([^\;]*);(?:([^\;]*);)?([^\;]*);([^\;]*)',
         'properties': [
             'time',
             'downtime_type',  # 'SERVICE' or 'HOST'
-            'event_type',  # 'FLAPPING'
+            'event_type',  # 'DOWNTIME'
             'hostname',  # The hostname
             'service_desc',  # The service description or None
             'state',  # 'STOPPED' or 'STARTED'
@@ -139,12 +169,10 @@ class LogEvent(object):  # pylint: disable=too-few-public-methods
 
         # Find the type of event
         event_type_match = EVENT_TYPE_PATTERN.match(log)
-
         if event_type_match:
             # parse it with it's pattern
             event_type = EVENT_TYPES[event_type_match.group(1)]
             properties_match = re.match(event_type['pattern'], log)
-
             if properties_match:
                 self.valid = True
 
@@ -155,7 +183,7 @@ class LogEvent(object):  # pylint: disable=too-few-public-methods
                 # Convert the time to int
                 self.data['time'] = int(self.data['time'])
 
-                # Convert attempts to int
+                # Convert event_type to int
                 if 'event_type' in self.data:
                     self.event_type = self.data['event_type']
 

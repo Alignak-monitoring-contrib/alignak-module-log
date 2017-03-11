@@ -292,14 +292,13 @@ class MonitoringLogsCollector(BaseModule):
                     "message": b.data['message'],
                 }
 
-            if not data:
-                logger.warning("No monitoring event detected from: %s", b.data['message'])
-                return
             try:
                 logger.debug("Posting history data: %s", data)
                 self.backend.post('history', data)
             except BackendException as exp:
                 logger.exception("Exception: %s", exp)
+        else:
+            logger.warning("No monitoring event detected from: %s", b.data['message'])
 
     def main(self):
         """Main loop of the process
