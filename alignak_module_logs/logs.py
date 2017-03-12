@@ -31,10 +31,12 @@ from logging.handlers import TimedRotatingFileHandler
 from logging.config import dictConfig as logger_dictConfig
 
 from alignak.basemodule import BaseModule
+from alignak_module_logs.logevent import LogEvent
 
-logger = logging.getLogger('alignak.module')  # pylint: disable=C0103
+from alignak_backend_client.client import Backend, BackendException
 
-# pylint: disable=C0103
+logger = logging.getLogger('alignak.module')
+
 properties = {
     'daemons': ['broker'],
     'type': 'logs',
@@ -44,8 +46,7 @@ properties = {
 
 
 def get_instance(mod_conf):
-    """
-    Return a module instance for the modules manager
+    """Return a module instance for the modules manager
 
     :param mod_conf: the module properties as defined globally in this file
     :return:
@@ -56,13 +57,10 @@ def get_instance(mod_conf):
 
 
 class MonitoringLogsCollector(BaseModule):
-    """
-    Monitoring logs module main class
-    """
+    """Monitoring logs module main class"""
     def __init__(self, mod_conf):
         # pylint: disable=global-statement
-        """
-        Module initialization
+        """Module initialization
 
         mod_conf is a dictionary that contains:
         - all the variables declared in the module configuration file
@@ -119,8 +117,44 @@ class MonitoringLogsCollector(BaseModule):
 
         self.setup_logging()
 
+        # Alignak Backend part
+        # ---
+        self.backend_available = False
+        self.backend_url = getattr(mod_conf, 'alignak_backend', '')
+        if self.backend_url:
+            logger.info("Alignak backend endpoint: %s", self.backend_url)
+
+            self.client_processes = int(getattr(mod_conf, 'client_processes', '1'))
+            logger.info("Number of processes used by backend client: %s", self.client_processes)
+
+            self.backend = Backend(self.backend_url, self.client_processes)
+            # If a backend token is provided in the configuration, we assume that it is valid
+            # and the backend is yet connected and authenticated
+            self.backend.token = getattr(mod_conf, 'token', '')
+            self.backend.authenticated = (self.backend.token != '')
+            self.backend_available = False
+
+            self.backend_username = getattr(mod_conf, 'username', '')
+            self.backend_password = getattr(mod_conf, 'password', '')
+            self.backend_generate = getattr(mod_conf, 'allowgeneratetoken', False)
+
+            self.alignak_backend_polling_period = \
+                int(getattr(mod_conf, 'alignak_backend_polling_period', '10'))
+
+            if not self.backend.token and not self.backend_username:
+                logger.warning("No Alignak backend credentials configured (empty token and "
+                               "empty username. "
+                               "The requested backend connection will not be available")
+                self.backend_url = ''
+            else:
+                self.getBackendAvailability()
+        else:
+            logger.warning('Alignak Backend is not configured. '
+                           'Some module features will not be available.')
+
     def init(self):
         """Handle this module "post" init ; just before it'll be started.
+
         Like just open necessaries file(s), database(s),
         or whatever the module will need.
 
@@ -154,14 +188,36 @@ class MonitoringLogsCollector(BaseModule):
                 logger.error("Logger configuration file is not parsable correctly!")
                 logger.exception(exp)
 
+    def getBackendAvailability(self):
+        """Authenticate and get the token
+
+        :return: None
+        """
+        generate = 'enabled'
+        if not self.backend_generate:
+            generate = 'disabled'
+
+        try:
+            if not self.backend.authenticated:
+                logger.info("Signing-in to the backend...")
+                self.backend_available = self.backend.login(self.backend_username,
+                                                            self.backend_password, generate)
+            logger.debug("Checking backend availability, token: %s, authenticated: %s",
+                         self.backend.token, self.backend.authenticated)
+            self.backend.get('/realm', {'where': json.dumps({'name': 'All'})})
+            self.backend_available = True
+        except BackendException as exp:
+            logger.warning("Alignak backend is currently not available.")
+            logger.debug("Exception: %s", exp)
+            self.backend_available = False
+
     def do_loop_turn(self):
         """This function is present because of an abstract function in the BaseModule class"""
         logger.info("In loop")
         time.sleep(1)
 
     def manage_brok(self, b):
-        """
-        We get the data to manage
+        """We got the data to manage
 
         :param b: Brok object
         :type b: object
@@ -171,18 +227,81 @@ class MonitoringLogsCollector(BaseModule):
         if b.type not in ['monitoring_log']:
             return
 
-        if b.data['level'].lower() not in ['debug', 'info', 'warning', 'error', 'critical']:
+        level = b.data['level'].lower()
+        if level not in ['debug', 'info', 'warning', 'error', 'critical']:
             return
 
         logger.debug("Got monitoring log brok: %s", b)
 
         # Send to configured logger
-        func = getattr(self.logger, b.data['level'].lower())
+        func = getattr(self.logger, level)
         func(b.data['message'])
 
+        if not self.backend_available:
+            return
+
+        # Try to get a monitoring event
+        event = LogEvent(('[%s] ' % int(time.time())) + b.data['message'])
+        if event.valid:
+            # -------------------------------------------
+            # Add an history event
+            data = {}
+            if event.event_type == 'NOTIFICATION':
+                data = {
+                    "host_name": event.data['hostname'],
+                    "service_name": event.data['service_desc'],
+                    "user_name": "Alignak",
+                    "type": "monitoring.notification",
+                    "message": b.data['message'],
+                }
+
+            if event.event_type == 'ALERT':
+                data = {
+                    "host_name": event.data['hostname'],
+                    "service_name": event.data['service_desc'],
+                    "user_name": "Alignak",
+                    "type": "monitoring.alert",
+                    "message": b.data['message'],
+                }
+
+            if event.event_type == 'DOWNTIME':
+                downtime_type = "monitoring.downtime_start"
+                if event.data['state'] == 'STOPPED':
+                    downtime_type = "monitoring.downtime_end"
+                if event.data['state'] == 'CANCELLED':
+                    downtime_type = "monitoring.downtime_cancelled"
+
+                data = {
+                    "host_name": event.data['hostname'],
+                    "service_name": event.data['service_desc'],
+                    "user_name": "Alignak",
+                    "type": downtime_type,
+                    "message": b.data['message'],
+                }
+
+            if event.event_type == 'FLAPPING':
+                flapping_type = "monitoring.flapping_start"
+                if event.data['state'] == 'STOPPED':
+                    flapping_type = "monitoring.flapping_stop"
+
+                data = {
+                    "host_name": event.data['hostname'],
+                    "service_name": event.data['service_desc'],
+                    "user_name": "Alignak",
+                    "type": flapping_type,
+                    "message": b.data['message'],
+                }
+
+            try:
+                logger.debug("Posting history data: %s", data)
+                self.backend.post('history', data)
+            except BackendException as exp:
+                logger.exception("Exception: %s", exp)
+        else:
+            logger.warning("No monitoring event detected from: %s", b.data['message'])
+
     def main(self):
-        """
-        Main loop of the process
+        """Main loop of the process
 
         This module is an "external" module
         :return:
