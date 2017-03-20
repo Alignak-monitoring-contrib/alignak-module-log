@@ -45,6 +45,11 @@ properties = {
 }
 
 
+class UTCFormatter(logging.Formatter):
+    """This logging formatter converts the log date/time to UTC"""
+    converter = time.gmtime
+
+
 def get_instance(mod_conf):
     """Return a module instance for the modules manager
 
@@ -92,7 +97,7 @@ class MonitoringLogsCollector(BaseModule):
         self.log_filename = os.path.join(self.log_dir, self.log_file)
         self.log_rotation_when = getattr(mod_conf, 'log_rotation_when', 'midnight')
         self.log_rotation_interval = int(getattr(mod_conf, 'log_rotation_interval', '1'))
-        self.log_rotation_count = int(getattr(mod_conf, 'log_rotation_count', '7'))
+        self.log_rotation_count = int(getattr(mod_conf, 'log_rotation_count', '365'))
         self.log_level = getattr(mod_conf, 'log_level', 'INFO')
         self.log_level = getattr(logging, self.log_level, None)
         self.log_format = getattr(mod_conf, 'log_format ',
@@ -328,6 +333,9 @@ class MonitoringLogsCollector(BaseModule):
         logger.info("stopping...")
 
         # Properly close all the Python logging stuff
-        logging.shutdown()
+        # fixme: this seems to make the alignak daemon hung when shutting down...
+        # probably because it is running as a daemon.
+        # See: http://stackoverflow.com/questions/24816456/python-logging-wont-shutdown
+        # logging.shutdown()
 
         logger.info("stopped")

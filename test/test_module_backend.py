@@ -166,6 +166,9 @@ class TestModuleConnection(AlignakTest):
         # Clear logs
         self.clear_logs()
 
+        if os.path.exists('/tmp/monitoring-logs.log'):
+            os.remove('/tmp/monitoring-logs.log')
+
         if os.path.exists('/tmp/rotating-monitoring.log'):
             os.remove('/tmp/rotating-monitoring.log')
 
@@ -256,10 +259,10 @@ class TestModuleConnection(AlignakTest):
         instance.manage_brok(b)
 
         # Get log file that should contain one line
-        with open('/tmp/rotating-monitoring.log', 'r') as f:
+        with open('/tmp/monitoring-logs.log', 'r') as f:
             data = f.readlines()
-        data = data[5:]
-        # self.assertEqual(3, len(data))
+        print("Read data: %s" % data)
+        self.assertEqual(5, len(data))
         logs = []
         for line in data:
             line = line.replace('ERROR: ', '')

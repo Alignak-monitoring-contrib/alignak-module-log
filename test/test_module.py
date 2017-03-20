@@ -294,7 +294,7 @@ class TestModules(AlignakTest):
         self.assert_log_match(
             re.escape(" - log level: 20"), 3)
         self.assert_log_match(
-            re.escape(" - rotation every 1 midnight, keeping 7 files"), 4)
+            re.escape(" - rotation every 1 midnight, keeping 365 files"), 4)
 
     def test_module_start_parameters_1(self):
         """
@@ -382,7 +382,7 @@ class TestModules(AlignakTest):
         self.assert_log_match(
             re.escape(" - log level: 20"), 5)
         self.assert_log_match(
-            re.escape(" - rotation every 1 midnight, keeping 7 files"), 6)
+            re.escape(" - rotation every 1 midnight, keeping 365 files"), 6)
 
         # -----
         # Provide parameters - logger configuration file (exists)
@@ -409,7 +409,7 @@ class TestModules(AlignakTest):
         self.assert_log_match(
             re.escape("Logger configuration file is not parsable correctly!"), 2)
         self.assert_log_match(
-            re.escape("Unable to configure logger 'alignak.module.logs': "
+            re.escape("Unable to configure root logger: "
                       "Unable to add handler u'console': u'console'"), 3)
 
         # -----
@@ -448,6 +448,9 @@ class TestModules(AlignakTest):
         # -----
         # Clear logs
         self.clear_logs()
+
+        if os.path.exists('/tmp/monitoring-logs.log'):
+            os.remove('/tmp/monitoring-logs.log')
 
         if os.path.exists('/tmp/rotating-monitoring.log'):
             os.remove('/tmp/rotating-monitoring.log')
@@ -505,11 +508,11 @@ class TestModules(AlignakTest):
         b.prepare()
         instance.manage_brok(b)
 
-        # Get log file that should contain one line
-        with open('/tmp/rotating-monitoring.log', 'r') as f:
+        # Get the monitoring logs log file that should contain only one line
+        with open('/tmp/monitoring-logs.log', 'r') as f:
             data = f.readlines()
-            self.assertEqual(6, len(data))
             print(data)
+            self.assertEqual(1, len(data))
 
 
         # And we clear all now
