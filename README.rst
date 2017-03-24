@@ -72,19 +72,25 @@ The default configuration file is *mod-logs.cfg*. This file is commented to help
 
 To configure Alignak broker to use this module:
 
-    - edit your broker daemon configuration file
-    - add the `module_alias` parameter value (`logs`) to the `modules` parameter of the daemon
+- edit your broker daemon configuration file
+- add the `module_alias` parameter value (`logs`) to the `modules` parameter of the daemon
 
-To configure this module to send its log to the Alignak badckend:
+To configure this module to send its log to the Alignak backend:
 
-    - edit the module configuration file to set the Alignak backend parameters (eg. url and login information)
+- edit the module configuration file to set the Alignak backend parameters (eg. url and login information)
 
 To set up several logs collectors:
 
-    - copy the default configuration to another file,
-    - change the module alias parameter (`logs_bis`)
-    - edit your broker daemon configuration file
-    - add the new `module_alias` parameter value (`logs_bis`) to the `modules` parameter of the daemon
+- copy the default configuration to another file,
+- change the module alias parameter (`logs_bis`)
+- edit your broker daemon configuration file
+- add the new `module_alias` parameter value (`logs_bis`) to the `modules` parameter of the daemon
+
+To set up your own logger:
+
+- edit the module configuration file to uncomment the `logger_configuration` variable
+- update the logger configuration file (eg. mod-logs-logger.json) to replace `ALIGNAKLOG` with your target log directory
+- update the logger configuration file to suit your needs ... then python logger on the Internet is your best friend :)
 
 Monitoring logs configuration
 -----------------------------
