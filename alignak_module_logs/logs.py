@@ -240,8 +240,11 @@ class MonitoringLogsCollector(BaseModule):
         logger.debug("Got monitoring log brok: %s", b)
 
         # Send to configured logger
+        message = b.data['message']
+        message = message.replace('\r', '\\r')
+        message = message.replace('\n', '\\n')
         func = getattr(self.logger, level)
-        func(b.data['message'])
+        func(message)
 
         if not self.backend_available:
             return

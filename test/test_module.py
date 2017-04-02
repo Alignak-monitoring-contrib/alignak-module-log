@@ -508,12 +508,17 @@ class TestModules(AlignakTest):
         b.prepare()
         instance.manage_brok(b)
 
+        b = Brok({'type': 'monitoring_log', 'data': {'level': 'info',
+                                                     'message': 'test message\r\nlong output'}})
+        b.prepare()
+        instance.manage_brok(b)
+
         # Get the monitoring logs log file that should contain only one line
         with open('/tmp/monitoring-logs.log', 'r') as f:
             data = f.readlines()
             print(data)
-            self.assertEqual(1, len(data))
-
+            # Only two lines, even if a message has a \r
+            self.assertEqual(2, len(data))
 
         # And we clear all now
         self.modulemanager.stop_all()
