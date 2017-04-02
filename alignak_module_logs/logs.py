@@ -213,7 +213,8 @@ class MonitoringLogsCollector(BaseModule):
             self.backend_available = True
         except BackendException as exp:
             logger.warning("Alignak backend is currently not available.")
-            logger.debug("Exception: %s", exp)
+            logger.warning("Exception: %s", exp)
+            logger.warning("Response: %s", exp.response)
             self.backend_available = False
 
     def do_loop_turn(self):  # pragma: no cover
@@ -226,7 +227,7 @@ class MonitoringLogsCollector(BaseModule):
 
         :param b: Brok object
         :type b: object
-        :return: None
+        :return: False if a backend post error happens
         """
         # Ignore all except 'monitoring_log' broks...
         if b.type not in ['monitoring_log']:
@@ -251,6 +252,15 @@ class MonitoringLogsCollector(BaseModule):
             # -------------------------------------------
             # Add an history event
             data = {}
+            if event.event_type == 'TIMEPERIOD':
+                data = {
+                    "host_name": 'n/a',
+                    "service_name": 'n/a',
+                    "user_name": "Alignak",
+                    "type": "monitoring.timeperiod_transition",
+                    "message": b.data['message'],
+                }
+
             if event.event_type == 'NOTIFICATION':
                 data = {
                     "host_name": event.data['hostname'],
@@ -297,13 +307,20 @@ class MonitoringLogsCollector(BaseModule):
                     "message": b.data['message'],
                 }
 
-            try:
-                logger.debug("Posting history data: %s", data)
-                self.backend.post('history', data)
-            except BackendException as exp:
-                logger.exception("Exception: %s", exp)
+            if data:
+                try:
+                    logger.debug("Posting history data: %s", data)
+                    self.backend.post('history', data)
+                except BackendException as exp:
+                    logger.exception("Exception: %s", exp)
+                    logger.error("Exception response: %s", exp.response)
+                    return False
+            else:
+                logger.warning("Monitoring event not stored in the backend: %s", b.data['message'])
         else:
             logger.warning("No monitoring event detected from: %s", b.data['message'])
+
+        return True
 
     def main(self):
         """Main loop of the process
