@@ -216,7 +216,7 @@ class MonitoringLogsCollector(BaseModule):
             logger.debug("Exception: %s", exp)
             self.backend_available = False
 
-    def do_loop_turn(self):
+    def do_loop_turn(self):  # pragma: no cover
         """This function is present because of an abstract function in the BaseModule class"""
         logger.info("In loop")
         time.sleep(1)
