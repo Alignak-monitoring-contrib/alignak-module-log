@@ -49,13 +49,61 @@ The supported event are listed in the event_type variable
 import re
 
 # pylint: disable=bad-continuation
-
-EVENT_TYPE_PATTERN = \
-    re.compile(
-        r'^\[[0-9]{10}] (?:HOST|SERVICE) '
-        r'(ALERT|NOTIFICATION|FLAPPING|COMMENT|ACKNOWLEDGE|DOWNTIME)(?: ALERT)?:.*'
-    )
+EVENT_TYPE_PATTERN = re.compile(
+    r'^\[[0-9]{10}] (TIMEPERIOD TRANSITION|EXTERNAL COMMAND|RETENTION SAVE|RETENTION LOAD|'
+    r'CURRENT HOST STATE|CURRENT SERVICE STATE|HOST COMMENT|SERVICE COMMENT|HOST NOTIFICATION|'
+    r'SERVICE NOTIFICATION|HOST ALERT|SERVICE ALERT|HOST COMMENT|SERVICE COMMENT|'
+    r'HOST ACKNOWLEDGE ALERT|SERVICE ACKNOWLEDGE ALERT|HOST DOWNTIME ALERT|SERVICE DOWNTIME ALERT|'
+    r'HOST FLAPPING ALERT|SERVICE FLAPPING ALERT)($|: .*)'
+)
 EVENT_TYPES = {
+    'TIMEPERIOD': {
+        # [1490998324] RETENTION SAVE
+        'pattern': r'^\[([0-9]{10})] (TIMEPERIOD) (TRANSITION): (.*)',
+        'properties': [
+            'time',
+            'event_type',  # 'TIMEPERIOD'
+            'state_type',  # 'TRANSITION'
+            'output',  # 'WARNING - load average: 5.04, 4.67, 5.04'
+        ]
+    },
+    'RETENTION': {
+        # [1490998324] RETENTION SAVE
+        'pattern': r'^\[([0-9]{10})] (RETENTION) (LOAD|SAVE): (.*)',
+        'properties': [
+            'time',
+            'event_type',  # 'RETENTION'
+            'state_type',  # 'LOAD' or 'SAVE'
+            'output',  # 'scheduler name
+        ]
+    },
+    'EXTERNAL': {
+        # [1490997636] EXTERNAL COMMAND: [1490997512]
+        # PROCESS_HOST_CHECK_RESULT;ek3022sg-0001;0;EK3022SG-0001 is alive,
+        # uptime is 43639 seconds (0 days 12 hours 7 minutes 19 seconds 229 ms)|'Uptime'=43639
+        'pattern': r'^\[([0-9]{10})] (EXTERNAL COMMAND): '
+                   r'([^\;]*);([^\;]*)',
+        'properties': [
+            'time',
+            'event_type',  # 'EXTERNAL COMMAND'
+            'command',  # 'PROCESS_SERVICE_CHECK_RESULT'
+            'parameters',  # ;ek3022sg-0001;svc_Screensaver;0;Ok|'ScreensaverOff'=61c
+        ]
+    },
+    'CURRENT': {
+        # ex: "[1491033954] CURRENT SERVICE STATE:
+        # cogny;Mysql threads;OK;HARD;1;OK - 19 client connection threads"
+        'pattern': r'^\[([0-9]{10})] (CURRENT) (HOST|SERVICE) (STATE): '
+                   r'([^\;]*);(?:([^\;]*);)?([^\;]*)',
+        'properties': [
+            'time',
+            'state_type',  # 'SERVICE' (or could be 'HOST')
+            'event_type',  # 'COMMENT'
+            'hostname',  # 'localhost'
+            'service_desc',  # 'cpu load maui' (or could be None)
+            'output',  # 'WARNING - load average: 5.04, 4.67, 5.04'
+        ]
+    },
     'NOTIFICATION': {
         # ex: "[1402515279] SERVICE NOTIFICATION:
         # admin;localhost;check-ssh;CRITICAL;notify-service-by-email;Connection refused"
@@ -166,30 +214,39 @@ class LogEvent(object):  # pylint: disable=too-few-public-methods
         self.valid = False
         self.time = None
         self.event_type = 'unknown'
+        self.pattern = 'unknown'
 
         # Find the type of event
         event_type_match = EVENT_TYPE_PATTERN.match(log)
         if event_type_match:
+            matched = event_type_match.group(1)
+            matched = matched.split()
+            self.pattern = matched[0]
+            if self.pattern in ['HOST', 'SERVICE']:
+                self.pattern = matched[1]
+
             # parse it with it's pattern
-            event_type = EVENT_TYPES[event_type_match.group(1)]
-            properties_match = re.match(event_type['pattern'], log)
-            if properties_match:
-                self.valid = True
+            if self.pattern in EVENT_TYPES:
+                event_type = EVENT_TYPES[self.pattern]
+                properties_match = re.match(event_type['pattern'], log)
+                if properties_match:
+                    self.valid = True
 
-                # Populate self.data with the event's properties
-                for i, prop in enumerate(event_type['properties']):
-                    self.data[prop] = properties_match.group(i + 1)
+                    # Populate self.data with the event's properties
+                    for i, prop in enumerate(event_type['properties']):
+                        # print("Property: %s / %s" % (prop, properties_match.group(i + 1)))
+                        self.data[prop] = properties_match.group(i + 1)
 
-                # Convert the time to int
-                self.data['time'] = int(self.data['time'])
+                    # Convert the time to int
+                    self.data['time'] = int(self.data['time'])
 
-                # Convert event_type to int
-                if 'event_type' in self.data:
-                    self.event_type = self.data['event_type']
+                    # Convert event_type to int
+                    if 'event_type' in self.data:
+                        self.event_type = self.data['event_type']
 
-                # Convert attempts to int
-                if 'attempts' in self.data:
-                    self.data['attempts'] = int(self.data['attempts'])
+                    # Convert attempts to int
+                    if 'attempts' in self.data:
+                        self.data['attempts'] = int(self.data['attempts'])
 
     def __iter__(self):
         return self.data.iteritems()

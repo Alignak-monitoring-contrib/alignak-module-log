@@ -41,11 +41,39 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 from alignak_test import AlignakTest
 from alignak_module_logs.logevent import LogEvent
 
 
 class TestParseLogEvent(AlignakTest):
+
+    def test_from_file(self):
+        self.maxDiff = None
+
+        count_events = 0
+        count_non_events = 0
+        logs_dir = os.path.join(os.path.abspath(os.path.dirname(__file__)), "./logs")
+        print("Logs directory: %s" % logs_dir)
+        for file in os.listdir(logs_dir):
+            print("Log file: %s" % os.path.join(logs_dir, file))
+            with open(os.path.join(logs_dir, file), "r") as logfile:
+                data = logfile.readlines()
+                for log in data:
+                    log.rstrip()
+                    log = log.replace('INFO: ', '')
+                    log = log.replace('WARNING: ', '')
+                    log = log.replace('ERROR: ', '')
+                    event = LogEvent(log)
+                    if not event.valid:
+                        if 'RETENTION' not in log:
+                            count_non_events += 1
+                            print("*** Log (unparsed): %s" % log)
+                    else:
+                        count_events += 1
+                        # print("Event: %s" % event)
+        assert count_events > 0
+        # assert count_non_events == 0
 
     def test_comment_service(self):
         self.maxDiff = None
@@ -60,10 +88,10 @@ class TestParseLogEvent(AlignakTest):
         print(event)
         assert event.data == expected
 
-    def test_ack_host(self):
+    def test_comment_host(self):
         self.maxDiff = None
 
-        log = '[1402515279] HOST COMMENT ALERT: pi2;STARTED;Host problem has been acknowledged'
+        log = '[1402515279] HOST COMMENT: pi2;Host comment'
         expected = {
             'hostname': 'pi2', 'event_type': 'COMMENT', 'service_desc': None,
             'comment_type': 'HOST', 'time': 1402515279,
