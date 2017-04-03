@@ -227,14 +227,35 @@ class TestModuleConnection(AlignakTest):
         # Unknown brok type
         b = Brok({'type': 'unknown', 'data': {'level': 'info', 'message': 'test message'}})
         b.prepare()
-        instance.manage_brok(b)
+        assert False == instance.manage_brok(b)
 
         # Unknown log level
         b = Brok({'type': 'monitoring_log', 'data': {'level': 'unknown', 'message': 'test message'}})
         b.prepare()
-        instance.manage_brok(b)
+        assert False == instance.manage_brok(b)
 
         b = Brok({'type': 'monitoring_log', 'data': {'level': 'info', 'message': 'test message'}})
+        b.prepare()
+        assert True == instance.manage_brok(b)
+
+        b = Brok({'type': 'monitoring_log', 'data': {
+            'level': 'info',
+            'message': 'TIMEPERIOD TRANSITION: 24x7;-1;1'
+        }})
+        b.prepare()
+        assert True == instance.manage_brok(b)
+
+        b = Brok({'type': 'monitoring_log', 'data': {
+            'level': 'info',
+            'message': 'RETENTION LOAD: scheduler'
+        }})
+        b.prepare()
+        assert True == instance.manage_brok(b)
+
+        b = Brok({'type': 'monitoring_log', 'data': {
+            'level': 'info',
+            'message': 'RETENTION SAVE: scheduler'
+        }})
         b.prepare()
         assert True == instance.manage_brok(b)
 
@@ -288,7 +309,7 @@ class TestModuleConnection(AlignakTest):
         with open('/tmp/monitoring-logs.log', 'r') as f:
             data = f.readlines()
         print("Read data: %s" % data)
-        self.assertEqual(8, len(data))
+        self.assertEqual(10, len(data))
         logs = []
         for line in data:
             line = line.replace('ERROR: ', '')
@@ -297,20 +318,19 @@ class TestModuleConnection(AlignakTest):
             logs.append(line)
         print(logs)
 
-        assert 'TIMEPERIOD' in data[0]
-        assert 'RETENTION LOAD' in data[1]
-        assert 'RETENTION SAVE' in data[2]
-        assert 'test message' in data[3]
+        assert 'test message' in data[0]
+        assert 'TIMEPERIOD' in data[1]
+        assert 'RETENTION LOAD' in data[2]
+        assert 'RETENTION SAVE' in data[3]
         assert 'SERVICE ALERT: cogny;Load;OK;HARD;4;OK - load average: 0.74, 0.89, 1.03' in data[4]
         assert 'SERVICE NOTIFICATION: admin;localhost;check-ssh;' \
                'CRITICAL;notify-service-by-email;Connection refused' in data[5]
         assert 'CURRENT SERVICE STATE: lachassagne;Zombies;' \
                 'OK;HARD;1;PROCS OK: 0 processes with STATE = Z' in data[6]
         assert 'ACKNOWLEDGE_HOST_PROBLEM;pi2;2;1;1;admin;' \
-               'Acknowledge requested from WebUI' in data[4]
-        assert 'SERVICE DOWNTIME ALERT: cogny;CPU;STARTED' in data[5]
-        assert 'SERVICE FLAPPING ALERT: lachassagne;I/O stats disk 2;STARTED' in data[6]
                'Acknowledge requested from WebUI' in data[7]
+        assert 'SERVICE DOWNTIME ALERT: cogny;CPU;STARTED' in data[8]
+        assert 'SERVICE FLAPPING ALERT: lachassagne;I/O stats disk 2;STARTED' in data[9]
 
         log = logs[2]
         log = log[13:]
@@ -343,15 +363,10 @@ class TestModuleConnection(AlignakTest):
         backend.login("admin", "admin", "force")
 
         r = backend.get('history')
-        print ("History: %s", r)
         for item in r['_items']:
             print("- %s" % item)
-        self.assertEqual(len(r['_items']), 4)
-        assert r['_items'][0]['host_name'] == 'cogny'
-        assert r['_items'][0]['service_name'] == 'Load'
-        assert r['_items'][0]['type'] == 'monitoring.alert'
-        assert r['_items'][0]['message'] == 'SERVICE ALERT: cogny;Load;OK;HARD;4;' \
-        self.assertEqual(len(r['_items']), 3)
+        self.assertEqual(len(r['_items']), 5)
+
         assert r['_items'][0]['host_name'] == 'n/a'
         assert r['_items'][0]['service_name'] == 'n/a'
         assert r['_items'][0]['type'] == 'monitoring.timeperiod_transition'
@@ -369,15 +384,15 @@ class TestModuleConnection(AlignakTest):
         assert r['_items'][2]['message'] == 'SERVICE NOTIFICATION: admin;localhost;check-ssh;' \
                                             'CRITICAL;notify-service-by-email;Connection refused'
 
-        assert r['_items'][2]['host_name'] == 'cogny'
-        assert r['_items'][2]['service_name'] == 'CPU'
-        assert r['_items'][2]['type'] == 'monitoring.downtime_start'
-        assert r['_items'][2]['message'] == 'SERVICE DOWNTIME ALERT: cogny;CPU;STARTED; ' \
+        assert r['_items'][3]['host_name'] == 'cogny'
+        assert r['_items'][3]['service_name'] == 'CPU'
+        assert r['_items'][3]['type'] == 'monitoring.downtime_start'
+        assert r['_items'][3]['message'] == 'SERVICE DOWNTIME ALERT: cogny;CPU;STARTED; ' \
                                             'Service has entered a period of scheduled downtime'
 
-        assert r['_items'][3]['host_name'] == 'lachassagne'
-        assert r['_items'][3]['service_name'] == 'I/O stats disk 2'
-        assert r['_items'][3]['type'] == 'monitoring.flapping_start'
-        assert r['_items'][3]['message'] == 'SERVICE FLAPPING ALERT: lachassagne;I/O stats disk 2;' \
+        assert r['_items'][4]['host_name'] == 'lachassagne'
+        assert r['_items'][4]['service_name'] == 'I/O stats disk 2'
+        assert r['_items'][4]['type'] == 'monitoring.flapping_start'
+        assert r['_items'][4]['message'] == 'SERVICE FLAPPING ALERT: lachassagne;I/O stats disk 2;' \
                                             'STARTED; Service appears to have started flapping ' \
                                             '(51.6% change >= 50.0% threshold)'

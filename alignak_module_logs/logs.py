@@ -231,11 +231,11 @@ class MonitoringLogsCollector(BaseModule):
         """
         # Ignore all except 'monitoring_log' broks...
         if b.type not in ['monitoring_log']:
-            return
+            return False
 
         level = b.data['level'].lower()
         if level not in ['debug', 'info', 'warning', 'error', 'critical']:
-            return
+            return False
 
         logger.debug("Got monitoring log brok: %s", b)
 
@@ -247,7 +247,7 @@ class MonitoringLogsCollector(BaseModule):
         func(message)
 
         if not self.backend_available:
-            return
+            return False
 
         # Try to get a monitoring event
         event = LogEvent(('[%s] ' % int(time.time())) + b.data['message'])
