@@ -267,7 +267,7 @@ class MonitoringLogsCollector(BaseModule):
             if event.event_type == 'NOTIFICATION':
                 data = {
                     "host_name": event.data['hostname'],
-                    "service_name": event.data['service_desc'],
+                    "service_name": event.data['service_desc'] or 'n/a',
                     "user_name": "Alignak",
                     "type": "monitoring.notification",
                     "message": b.data['message'],
@@ -276,7 +276,7 @@ class MonitoringLogsCollector(BaseModule):
             if event.event_type == 'ALERT':
                 data = {
                     "host_name": event.data['hostname'],
-                    "service_name": event.data['service_desc'],
+                    "service_name": event.data['service_desc'] or 'n/a',
                     "user_name": "Alignak",
                     "type": "monitoring.alert",
                     "message": b.data['message'],
@@ -291,7 +291,7 @@ class MonitoringLogsCollector(BaseModule):
 
                 data = {
                     "host_name": event.data['hostname'],
-                    "service_name": event.data['service_desc'],
+                    "service_name": event.data['service_desc'] or 'n/a',
                     "user_name": "Alignak",
                     "type": downtime_type,
                     "message": b.data['message'],
@@ -304,7 +304,7 @@ class MonitoringLogsCollector(BaseModule):
 
                 data = {
                     "host_name": event.data['hostname'],
-                    "service_name": event.data['service_desc'],
+                    "service_name": event.data['service_desc'] or 'n/a',
                     "user_name": "Alignak",
                     "type": flapping_type,
                     "message": b.data['message'],
