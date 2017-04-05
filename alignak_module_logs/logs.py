@@ -25,6 +25,7 @@ them to a Python logger configured in the module configuration file
 import os
 import json
 import time
+import Queue
 import logging
 from logging import Formatter
 from logging.handlers import TimedRotatingFileHandler
@@ -338,17 +339,20 @@ class MonitoringLogsCollector(BaseModule):
         logger.info("starting...")
 
         while not self.interrupted:
-            logger.debug("queue length: %s", self.to_q.qsize())
-            start = time.time()
+            try:
+                logger.debug("queue length: %s", self.to_q.qsize())
+                start = time.time()
 
-            # Get message in the queue
-            l = self.to_q.get()
-            for b in l:
-                # Prepare and manage each brok in the queue message
-                b.prepare()
-                self.manage_brok(b)
+                message = self.to_q.get_nowait()
+                for brok in message:
+                    # Prepare and manage each brok in the queue message
+                    brok.prepare()
+                    self.manage_brok(brok)
 
-            logger.debug("time to manage %s broks (%d secs)", len(l), time.time() - start)
+                logger.debug("time to manage %s broks (%d secs)", len(message), time.time() - start)
+            except Queue.Empty:
+                # logger.debug("No message in the module queue")
+                time.sleep(0.1)
 
         logger.info("stopping...")
 
@@ -356,6 +360,6 @@ class MonitoringLogsCollector(BaseModule):
         # fixme: this seems to make the alignak daemon hung when shutting down...
         # probably because it is running as a daemon.
         # See: http://stackoverflow.com/questions/24816456/python-logging-wont-shutdown
-        # logging.shutdown()
+        logging.shutdown()
 
         logger.info("stopped")
