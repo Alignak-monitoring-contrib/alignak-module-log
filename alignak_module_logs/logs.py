@@ -187,7 +187,7 @@ class MonitoringLogsCollector(BaseModule):
                                                         backupCount=self.log_rotation_count)
                 file_handler.setFormatter(Formatter(self.log_format, self.log_date))
                 self.logger.addHandler(file_handler)
-                logger.info("Logger (default), added a TimedRotatingFileHandler")
+                logger.debug("Logger (default), added a TimedRotatingFileHandler")
         else:
             with open(self.logger_configuration, 'rt') as f:
                 config = json.load(f)

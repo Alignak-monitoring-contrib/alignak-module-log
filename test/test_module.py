@@ -106,12 +106,47 @@ class TestModules(AlignakTest):
         #  - get module properties and instances
         self.modulemanager.load_and_init([mod])
 
+        # Loading module logs
+        print("Load and init")
+        self.show_logs()
+        self.assert_log_match(re.escape(
+            "Importing Python module 'alignak_module_logs' for logs..."
+        ), 0)
+        self.assert_log_match(re.escape(
+            "Module properties: {'daemons': ['broker'], 'phases': ['running'], "
+            "'type': 'logs', 'external': True}"
+        ), 1)
+        self.assert_log_match(re.escape(
+            "Imported 'alignak_module_logs' for logs"
+        ), 2)
+        self.assert_log_match(re.escape(
+            "Loaded Python module 'alignak_module_logs' (logs)"
+        ), 3)
+        self.assert_log_match(re.escape(
+            "Give an instance of alignak_module_logs for alias: logs"
+        ), 4)
+        self.assert_log_match(re.escape(
+            "logger default configuration:"
+        ), 5)
+        self.assert_log_match(re.escape(
+            " - rotating logs in /tmp/monitoring-logs.log"
+        ), 6)
+        self.assert_log_match(re.escape(
+            " - log level: 20"
+        ), 7)
+        self.assert_log_match(re.escape(
+            " - rotation every 1 midnight, keeping 365 files"
+        ), 8)
+        self.assert_log_match(re.escape(
+            "Alignak Backend is not configured. Some module features will not be available."
+        ), 9)
+
+        time.sleep(1)
+        # Reload the module
+        print("Reload")
         self.modulemanager.load([mod])
         self.modulemanager.get_instances()
-
-        self.modulemanager.load([mod])
-        self.modulemanager.get_instances()
-
+        #
         # Loading module logs
         self.show_logs()
         self.assert_log_match(re.escape(
@@ -143,11 +178,46 @@ class TestModules(AlignakTest):
             " - rotation every 1 midnight, keeping 365 files"
         ), 8)
         self.assert_log_match(re.escape(
-            "Logger (default), added a TimedRotatingFileHandler"
+            "Alignak Backend is not configured. Some module features will not be available."
         ), 9)
+
+        self.assert_log_match(re.escape(
+            "Importing Python module 'alignak_module_logs' for logs..."
+        ), 10)
+        self.assert_log_match(re.escape(
+            "Module properties: {'daemons': ['broker'], 'phases': ['running'], "
+            "'type': 'logs', 'external': True}"
+        ), 11)
+        self.assert_log_match(re.escape(
+            "Imported 'alignak_module_logs' for logs"
+        ), 12)
+        self.assert_log_match(re.escape(
+            "Loaded Python module 'alignak_module_logs' (logs)"
+        ), 13)
+        self.assert_log_match(re.escape(
+            "Request external process to stop for logs"
+        ), 14)
+        self.assert_log_match(re.escape(
+            "External process stopped."
+        ), 15)
+        self.assert_log_match(re.escape(
+            "Give an instance of alignak_module_logs for alias: logs"
+        ), 16)
+        self.assert_log_match(re.escape(
+            "logger default configuration:"
+        ), 17)
+        self.assert_log_match(re.escape(
+            " - rotating logs in /tmp/monitoring-logs.log"
+        ), 18)
+        self.assert_log_match(re.escape(
+            " - log level: 20"
+        ), 19)
+        self.assert_log_match(re.escape(
+            " - rotation every 1 midnight, keeping 365 files"
+        ), 20)
         self.assert_log_match(re.escape(
             "Alignak Backend is not configured. Some module features will not be available."
-        ), 10)
+        ), 21)
 
         my_module = self.modulemanager.instances[0]
 
@@ -528,10 +598,6 @@ class TestModules(AlignakTest):
         self.assert_log_match(" - rotating logs in ./logs1/monitoring-logs.log", 6)
         self.assert_log_match(" - log level: 20", 7)
         self.assert_log_match(" - rotation every 1 midnight, keeping 365 files", 8)
-        self.assert_log_match("Alignak Backend is not configured. Some module features will not be available.", 9)
-        self.assert_log_match("Request external process to stop for logs", 10)
-        self.assert_log_match("I'm stopping module 'logs'", 11)
-        self.assert_log_match("External process stopped.", 12)
 
         # Load an initialize the modules:
         #  - load python module
