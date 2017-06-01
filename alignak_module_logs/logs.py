@@ -179,12 +179,15 @@ class MonitoringLogsCollector(BaseModule):
             # Set logger level
             self.logger.setLevel(self.log_level)
 
-            file_handler = TimedRotatingFileHandler(self.log_filename,
-                                                    when=self.log_rotation_when,
-                                                    interval=self.log_rotation_interval,
-                                                    backupCount=self.log_rotation_count)
-            file_handler.setFormatter(Formatter(self.log_format, self.log_date))
-            self.logger.addHandler(file_handler)
+            logger.debug("Logger (default) handlers: %s", self.logger.handlers)
+            if not self.logger.handlers:
+                file_handler = TimedRotatingFileHandler(self.log_filename,
+                                                        when=self.log_rotation_when,
+                                                        interval=self.log_rotation_interval,
+                                                        backupCount=self.log_rotation_count)
+                file_handler.setFormatter(Formatter(self.log_format, self.log_date))
+                self.logger.addHandler(file_handler)
+                logger.debug("Logger (default), added a TimedRotatingFileHandler")
         else:
             with open(self.logger_configuration, 'rt') as f:
                 config = json.load(f)
@@ -223,25 +226,25 @@ class MonitoringLogsCollector(BaseModule):
         logger.info("In loop")
         time.sleep(1)
 
-    def manage_brok(self, b):
+    def manage_brok(self, brok):
         """We got the data to manage
 
-        :param b: Brok object
-        :type b: object
+        :param brok: Brok object
+        :type brok: object
         :return: False if a backend post error happens
         """
         # Ignore all except 'monitoring_log' broks...
-        if b.type not in ['monitoring_log']:
+        if brok.type not in ['monitoring_log']:
             return False
 
-        level = b.data['level'].lower()
+        level = brok.data['level'].lower()
         if level not in ['debug', 'info', 'warning', 'error', 'critical']:
             return False
 
-        logger.debug("Got monitoring log brok: %s", b)
+        logger.debug("Got monitoring log brok: %s", brok)
 
         # Send to configured logger
-        message = b.data['message']
+        message = brok.data['message']
         message = message.replace('\r', '\\r')
         message = message.replace('\n', '\\n')
         func = getattr(self.logger, level)
@@ -251,7 +254,7 @@ class MonitoringLogsCollector(BaseModule):
             return False
 
         # Try to get a monitoring event
-        event = LogEvent(('[%s] ' % int(time.time())) + b.data['message'])
+        event = LogEvent(('[%s] ' % int(time.time())) + brok.data['message'])
         if event.valid:
             # -------------------------------------------
             # Add an history event
@@ -262,7 +265,7 @@ class MonitoringLogsCollector(BaseModule):
                     "service_name": 'n/a',
                     "user_name": "Alignak",
                     "type": "monitoring.timeperiod_transition",
-                    "message": b.data['message'],
+                    "message": brok.data['message'],
                 }
 
             if event.event_type == 'NOTIFICATION':
@@ -271,7 +274,7 @@ class MonitoringLogsCollector(BaseModule):
                     "service_name": event.data['service_desc'] or 'n/a',
                     "user_name": "Alignak",
                     "type": "monitoring.notification",
-                    "message": b.data['message'],
+                    "message": brok.data['message'],
                 }
 
             if event.event_type == 'ALERT':
@@ -280,7 +283,7 @@ class MonitoringLogsCollector(BaseModule):
                     "service_name": event.data['service_desc'] or 'n/a',
                     "user_name": "Alignak",
                     "type": "monitoring.alert",
-                    "message": b.data['message'],
+                    "message": brok.data['message'],
                 }
 
             if event.event_type == 'DOWNTIME':
@@ -295,7 +298,7 @@ class MonitoringLogsCollector(BaseModule):
                     "service_name": event.data['service_desc'] or 'n/a',
                     "user_name": "Alignak",
                     "type": downtime_type,
-                    "message": b.data['message'],
+                    "message": brok.data['message'],
                 }
 
             if event.event_type == 'FLAPPING':
@@ -308,7 +311,7 @@ class MonitoringLogsCollector(BaseModule):
                     "service_name": event.data['service_desc'] or 'n/a',
                     "user_name": "Alignak",
                     "type": flapping_type,
-                    "message": b.data['message'],
+                    "message": brok.data['message'],
                 }
 
             if data:
@@ -320,9 +323,10 @@ class MonitoringLogsCollector(BaseModule):
                     logger.error("Exception response: %s", exp.response)
                     return False
             else:
-                logger.warning("Monitoring event not stored in the backend: %s", b.data['message'])
+                logger.warning("Monitoring event not stored in the backend: %s",
+                               brok.data['message'])
         else:
-            logger.warning("No monitoring event detected from: %s", b.data['message'])
+            logger.warning("No monitoring event detected from: %s", brok.data['message'])
 
         return True
 
