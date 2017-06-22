@@ -91,16 +91,19 @@ EVENT_TYPES = {
         ]
     },
     'CURRENT': {
-        # ex: "[1491033954] CURRENT SERVICE STATE:
-        # cogny;Mysql threads;OK;HARD;1;OK - 19 client connection threads"
-        'pattern': r'^\[([0-9]{10})] (CURRENT) (HOST|SERVICE) (STATE): '
-                   r'([^\;]*);(?:([^\;]*);)?([^\;]*)',
+        # ex: "[1498108167] CURRENT HOST STATE: localhost;UP;HARD;1;Host assumed to be UP"
+        # ex: "[1498108167] CURRENT SERVICE STATE: localhost;Maintenance;UNKNOWN;HARD;0;"
+        'pattern': r'^\[([0-9]{10})] CURRENT (HOST|SERVICE) (STATE): '
+                   r'([^\;]*);(?:([^\;]*);)?([^\;]*);([^\;]*);([^\;]*);([^\;]*)',
         'properties': [
             'time',
-            'state_type',  # 'SERVICE' (or could be 'HOST')
-            'event_type',  # 'COMMENT'
+            'item_type',  # 'SERVICE' (or could be 'HOST')
+            'event_type',  # 'STATE'
             'hostname',  # 'localhost'
-            'service_desc',  # 'cpu load maui' (or could be None)
+            'service_desc',  # 'Maintenance' (or could be None)
+            'state',  # 'UP'
+            'state_type',  # 'HARD'
+            'attempts',  # '4'
             'output',  # 'WARNING - load average: 5.04, 4.67, 5.04'
         ]
     },
