@@ -323,8 +323,7 @@ class MonitoringLogsCollector(BaseModule):
                     logger.error("Exception response: %s", exp.response)
                     return False
             else:
-                logger.warning("Monitoring event not stored in the backend: %s",
-                               brok.data['message'])
+                logger.debug("Monitoring event not stored in the backend: %s", brok.data['message'])
         else:
             logger.warning("No monitoring event detected from: %s", brok.data['message'])
 

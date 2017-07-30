@@ -220,21 +220,60 @@ class TestParseLogEvent(AlignakTest):
         event = LogEvent(log)
         assert event.data == expected
 
-    def test_host_flapping(self):
-        log = '[1375301662] SERVICE FLAPPING ALERT: testhost;check_ssh;STARTED; Service appears to have started flapping (24.2% change >= 20.0% threshold)'
+    def test_retention(self):
+        log = '[1498111760] RETENTION SAVE: scheduler-master'
         expected = {
-            'alert_type': 'SERVICE',
-            'event_type': 'FLAPPING',
-            'hostname': 'testhost',
-            'output': ' Service appears to have started flapping (24.2% change >= 20.0% threshold)',
-            'service_desc': 'check_ssh',
-            'state': 'STARTED',
-            'time': 1375301662
+            'time': 1498111760,
+            'event_type': 'RETENTION',
+            'state_type': 'SAVE',
+            'output': 'scheduler-master'
         }
         event = LogEvent(log)
         assert event.data == expected
 
-    def test_service_flapping(self):
+        log = '[1498111760] RETENTION LOAD: scheduler-master'
+        expected = {
+            'time': 1498111760,
+            'event_type': 'RETENTION',
+            'state_type': 'LOAD',
+            'output': 'scheduler-master'
+        }
+        event = LogEvent(log)
+        assert event.data == expected
+
+    def test_host_current_state(self):
+        log = '[1498108167] CURRENT HOST STATE: localhost;UP;HARD;1;Host assumed to be UP'
+        expected = {
+            'item_type': 'HOST',
+            'event_type': 'STATE',
+            'hostname': 'localhost',
+            'service_desc': None,
+            'state_type': 'HARD',
+            'state': 'UP',
+            'attempts': 1,
+            'output': 'Host assumed to be UP',
+            'time': 1498108167
+        }
+        event = LogEvent(log)
+        assert event.data == expected
+
+    def test_service_current_state(self):
+        log = '[1498108167] CURRENT SERVICE STATE: localhost;Maintenance;UNKNOWN;HARD;0;'
+        expected = {
+            'item_type': 'SERVICE',
+            'event_type': 'STATE',
+            'hostname': 'localhost',
+            'service_desc': 'Maintenance',
+            'state_type': 'HARD',
+            'state': 'UNKNOWN',
+            'attempts': 0,
+            'output': '',
+            'time': 1498108167
+        }
+        event = LogEvent(log)
+        assert event.data == expected
+
+    def test_host_flapping(self):
         log = '[1375301662] HOST FLAPPING ALERT: hostbw;STARTED; Host appears to have started flapping (20.1% change > 20.0% threshold)'
         expected = {
             'alert_type': 'HOST',
@@ -242,6 +281,20 @@ class TestParseLogEvent(AlignakTest):
             'hostname': 'hostbw',
             'output': ' Host appears to have started flapping (20.1% change > 20.0% threshold)',
             'service_desc': None,
+            'state': 'STARTED',
+            'time': 1375301662
+        }
+        event = LogEvent(log)
+        assert event.data == expected
+
+    def test_service_flapping(self):
+        log = '[1375301662] SERVICE FLAPPING ALERT: testhost;check_ssh;STARTED; Service appears to have started flapping (24.2% change >= 20.0% threshold)'
+        expected = {
+            'alert_type': 'SERVICE',
+            'event_type': 'FLAPPING',
+            'hostname': 'testhost',
+            'output': ' Service appears to have started flapping (24.2% change >= 20.0% threshold)',
+            'service_desc': 'check_ssh',
             'state': 'STARTED',
             'time': 1375301662
         }
