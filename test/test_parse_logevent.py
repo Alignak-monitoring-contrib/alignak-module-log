@@ -193,6 +193,38 @@ class TestParseLogEvent(AlignakTest):
         event = LogEvent(log)
         assert event.data == expected
 
+    def test_event_handler_service(self):
+        log = '[1329144231] SERVICE EVENT HANDLER: host-01;Output-Load;OK;HARD;0;g_service_event_handler'
+        expected = {
+            'item_type': 'SERVICE',
+            'event_type': 'EVENT HANDLER',
+            'hostname': 'host-01',
+            'service_desc': 'Output-Load',
+            'attempts': 0,
+            'state_type': 'HARD',
+            'state': 'OK',
+            'time': 1329144231,
+            'output': 'g_service_event_handler',
+        }
+        event = LogEvent(log)
+        assert event.data == expected
+
+    def test_event_handler_host(self):
+        log = '[1329144231] HOST EVENT HANDLER: host-01;DOWN;HARD;0;g_host_event_handler'
+        expected = {
+            'item_type': 'HOST',
+            'event_type': 'EVENT HANDLER',
+            'hostname': 'host-01',
+            'service_desc': None,
+            'attempts': 0,
+            'state_type': 'HARD',
+            'state': 'DOWN',
+            'time': 1329144231,
+            'output': 'g_host_event_handler',
+        }
+        event = LogEvent(log)
+        assert event.data == expected
+
     def test_downtime_alert_host(self):
         log = '[1279250211] HOST DOWNTIME ALERT: testhost;STARTED; Host has entered a period of scheduled downtime'
         expected = {
