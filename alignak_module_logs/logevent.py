@@ -56,6 +56,7 @@ EVENT_TYPE_PATTERN = re.compile(
     r'HOST COMMENT|SERVICE COMMENT|'
     r'HOST NOTIFICATION|SERVICE NOTIFICATION|'
     r'HOST ALERT|SERVICE ALERT|'
+    r'HOST EVENT HANDLER|SERVICE EVENT HANDLER|'
     r'ACTIVE HOST CHECK|ACTIVE SERVICE CHECK|'
     r'PASSIVE HOST CHECK|PASSIVE SERVICE CHECK|'
     r'HOST ACKNOWLEDGE ALERT|SERVICE ACKNOWLEDGE ALERT|'
@@ -177,6 +178,22 @@ EVENT_TYPES = {
             'state_type',  # 'HARD'
             'attempts',  # '4'
             'output',  # 'WARNING - load average: 5.04, 4.67, 5.04'
+        ]
+    },
+    'EVENT': {
+        # ex: "[1329144231] HOST EVENT HANDLER: host-03;DOWN;HARD;0;g_host_event_handler"
+        'pattern': r'^\[([0-9]{10})] (HOST|SERVICE) (EVENT HANDLER): '
+                   r'([^\;]*);(?:([^\;]*);)?([^\;]*);([^\;]*);([^\;]*);([^\;]*)',
+        'properties': [
+            'time',
+            'item_type',  # 'SERVICE' (or could be 'HOST')
+            'event_type',  # 'EVENT HANDLER'
+            'hostname',  # 'localhost'
+            'service_desc',  # 'cpu load maui' (or could be None)
+            'state',  # 'WARNING'
+            'state_type',  # 'HARD'
+            'attempts',  # '4'
+            'output',  # 'g_host_event_handler'
         ]
     },
     'COMMENT': {
