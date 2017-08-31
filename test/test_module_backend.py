@@ -312,18 +312,32 @@ class TestModuleConnection(AlignakTest):
         b.prepare()
         instance.manage_brok(b)
 
+        b = Brok({'type': 'monitoring_log', 'data': {
+            'level': 'info',
+            'message': "ACTIVE SERVICE CHECK: localhost;Nrpe-status;OK;HARD;1;NRPE v2.15"
+        }})
+        b.prepare()
+        instance.manage_brok(b)
+
+        b = Brok({'type': 'monitoring_log', 'data': {
+            'level': 'info',
+            'message': "PASSIVE SERVICE CHECK: localhost;nsca_uptime;0;OK: uptime: 02:38h, "
+                       "boot: 2017-08-31 06:18:03 (UTC)|'uptime'=9508s;2100;90000"
+        }})
+        b.prepare()
+        instance.manage_brok(b)
+
         # Get log file that should contain one line
         with open('./logs2/monitoring-logs.log', 'r') as f:
             data = f.readlines()
         print("Read data: %s" % data)
-        self.assertEqual(10, len(data))
+        self.assertEqual(12, len(data))
         logs = []
         for line in data:
             line = line.replace('ERROR: ', '')
             line = line.replace('WARNING: ', '')
             line = line.replace('INFO: ', '')
             logs.append(line)
-        print(logs)
 
         assert 'test message' in data[0]
         assert 'TIMEPERIOD' in data[1]
@@ -338,6 +352,9 @@ class TestModuleConnection(AlignakTest):
                'Acknowledge requested from WebUI' in data[7]
         assert 'SERVICE DOWNTIME ALERT: cogny;CPU;STARTED' in data[8]
         assert 'SERVICE FLAPPING ALERT: lachassagne;I/O stats disk 2;STARTED' in data[9]
+        assert 'ACTIVE SERVICE CHECK: localhost;Nrpe-status;OK;HARD;1;NRPE v2.15' in data[10]
+        assert "PASSIVE SERVICE CHECK: localhost;nsca_uptime;0;OK: uptime: 02:38h, " \
+               "boot: 2017-08-31 06:18:03 (UTC)|'uptime'=9508s;2100;90000" in data[11]
 
         log = logs[2]
         log = log[13:]
@@ -403,3 +420,6 @@ class TestModuleConnection(AlignakTest):
         assert r['_items'][4]['message'] == 'SERVICE FLAPPING ALERT: lachassagne;I/O stats disk 2;' \
                                             'STARTED; Service appears to have started flapping ' \
                                             '(51.6% change >= 50.0% threshold)'
+
+        # Note that RETENTION, CURRENT STATE, and CHECKS monitoring log
+        # are not stored as events in the Alignak backend!
