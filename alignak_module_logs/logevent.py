@@ -50,10 +50,16 @@ import re
 
 # pylint: disable=bad-continuation
 EVENT_TYPE_PATTERN = re.compile(
-    r'^\[[0-9]{10}] (TIMEPERIOD TRANSITION|EXTERNAL COMMAND|RETENTION SAVE|RETENTION LOAD|'
-    r'CURRENT HOST STATE|CURRENT SERVICE STATE|HOST COMMENT|SERVICE COMMENT|HOST NOTIFICATION|'
-    r'SERVICE NOTIFICATION|HOST ALERT|SERVICE ALERT|HOST COMMENT|SERVICE COMMENT|'
-    r'HOST ACKNOWLEDGE ALERT|SERVICE ACKNOWLEDGE ALERT|HOST DOWNTIME ALERT|SERVICE DOWNTIME ALERT|'
+    r'^\[[0-9]{10}] (TIMEPERIOD TRANSITION|EXTERNAL COMMAND|'
+    r'RETENTION SAVE|RETENTION LOAD|'
+    r'CURRENT HOST STATE|CURRENT SERVICE STATE|'
+    r'HOST COMMENT|SERVICE COMMENT|'
+    r'HOST NOTIFICATION|SERVICE NOTIFICATION|'
+    r'HOST ALERT|SERVICE ALERT|'
+    r'ACTIVE HOST CHECK|ACTIVE SERVICE CHECK|'
+    r'PASSIVE HOST CHECK|PASSIVE SERVICE CHECK|'
+    r'HOST ACKNOWLEDGE ALERT|SERVICE ACKNOWLEDGE ALERT|'
+    r'HOST DOWNTIME ALERT|SERVICE DOWNTIME ALERT|'
     r'HOST FLAPPING ALERT|SERVICE FLAPPING ALERT)($|: .*)'
 )
 EVENT_TYPES = {
@@ -103,8 +109,40 @@ EVENT_TYPES = {
             'service_desc',  # 'Maintenance' (or could be None)
             'state',  # 'UP'
             'state_type',  # 'HARD'
-            'attempts',  # '4'
+            'attempts',  # '0'
             'output',  # 'WARNING - load average: 5.04, 4.67, 5.04'
+        ]
+    },
+    'ACTIVE': {
+        # ex: "[1402515279] ACTIVE SERVICE CHECK: localhost;Nrpe-status;OK;HARD;1;NRPE v2.15"
+        'pattern': r'^\[([0-9]{10})] ACTIVE (HOST|SERVICE) (CHECK): '
+                   r'([^\;]*);(?:([^\;]*);)?([^\;]*);([^\;]*);([^\;]*);([^\;]*)',
+        'properties': [
+            'time',
+            'item_type',  # 'SERVICE' (or could be 'HOST')
+            'event_type',  # 'CHECK'
+            'hostname',  # 'localhost'
+            'service_desc',  # 'cpu load maui' (or could be None)
+            'state',  # 'WARNING'
+            'state_type',  # 'HARD'
+            'attempts',  # '0'
+            'output',  # 'NRPE v2.15'
+        ]
+    },
+    'PASSIVE': {
+        # ex: "[1402515279] PASSIVE SERVICE CHECK: localhost;nsca_uptime;0;OK: uptime: 02:38h,
+        # boot: 2017-08-31 06:18:03 (UTC)|'uptime'=9508s;2100;90000"
+        'pattern': r'^\[([0-9]{10})] PASSIVE (HOST|SERVICE) (CHECK): '
+                   r'([^\;]*);(?:([^\;]*);)?([^\;]*);([^$]*)',
+        'properties': [
+            'time',
+            'item_type',  # 'SERVICE' (or could be 'HOST')
+            'event_type',  # 'CHECK'
+            'hostname',  # 'localhost'
+            'service_desc',  # 'cpu load maui' (or could be None)
+            'state_id',  # '0'
+            'output',  # 'K: uptime: 02:38h, boot: 2017-08-31 06:18:03 (UTC)
+            # |'uptime'=9508s;2100;90000'
         ]
     },
     'NOTIFICATION': {
