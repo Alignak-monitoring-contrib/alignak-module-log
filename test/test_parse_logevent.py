@@ -143,6 +143,7 @@ class TestParseLogEvent(AlignakTest):
         }
         event = LogEvent(log)
         assert event.data == expected
+        assert event.valid is True
 
     def test_notification_host(self):
         log = '[1402515279] HOST NOTIFICATION: admin;localhost;CRITICAL;notify-service-by-email;Connection refused'
@@ -268,6 +269,68 @@ class TestParseLogEvent(AlignakTest):
             'state': 'UNKNOWN',
             'attempts': 0,
             'output': '',
+            'time': 1498108167
+        }
+        event = LogEvent(log)
+        assert event.data == expected
+
+    def test_active_check(self):
+        log = '[1498108167] ACTIVE HOST CHECK: localhost;OK;HARD;1;Host is up'
+        expected = {
+            'item_type': 'HOST',
+            'event_type': 'CHECK',
+            'hostname': 'localhost',
+            'service_desc': None,
+            'state': 'OK',
+            'state_type': 'HARD',
+            'attempts': 1,
+            'output': 'Host is up',
+            'time': 1498108167
+        }
+        event = LogEvent(log)
+        assert event.data == expected
+
+        log = '[1498108167] ACTIVE SERVICE CHECK: localhost;Nrpe-status;OK;HARD;1;NRPE v2.15'
+        expected = {
+            'item_type': 'SERVICE',
+            'event_type': 'CHECK',
+            'hostname': 'localhost',
+            'service_desc': 'Nrpe-status',
+            'state': 'OK',
+            'state_type': 'HARD',
+            'attempts': 1,
+            'output': 'NRPE v2.15',
+            'time': 1498108167
+        }
+        event = LogEvent(log)
+        assert event.data == expected
+
+    def test_passive_check(self):
+        log = "[1498108167] PASSIVE HOST CHECK: localhost;0;Host is alive, uptime is 2291 seconds " \
+              "(0 days 0 hours 38 minutes 11 seconds 215 ms)|'Uptime'=2291"
+        expected = {
+            'item_type': 'HOST',
+            'event_type': 'CHECK',
+            'hostname': 'localhost',
+            'service_desc': None,
+            'state_id': '0',
+            'output': "Host is alive, uptime is 2291 seconds (0 days 0 hours 38 minutes 11 seconds 215 ms)"
+                      "|'Uptime'=2291",
+            'time': 1498108167
+        }
+        event = LogEvent(log)
+        assert event.data == expected
+
+        log = "[1498108167] PASSIVE SERVICE CHECK: localhost;nsca_uptime;0;OK: uptime: 02:38h, " \
+              "boot: 2017-08-31 06:18:03 (UTC)|'uptime'=9508s;2100;90000"
+        expected = {
+            'item_type': 'SERVICE',
+            'event_type': 'CHECK',
+            'hostname': 'localhost',
+            'service_desc': 'nsca_uptime',
+            'state_id': '0',
+            'output': "OK: uptime: 02:38h, "
+                      "boot: 2017-08-31 06:18:03 (UTC)|'uptime'=9508s;2100;90000",
             'time': 1498108167
         }
         event = LogEvent(log)
