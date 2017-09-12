@@ -1,1 +1,2 @@
-alignak_setup
+# Nothing special
+alignak_backend_client
