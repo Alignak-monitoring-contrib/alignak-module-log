@@ -254,78 +254,82 @@ class MonitoringLogsCollector(BaseModule):
             return False
 
         # Try to get a monitoring event
-        event = LogEvent(('[%s] ' % int(time.time())) + brok.data['message'])
-        if event.valid:
-            # -------------------------------------------
-            # Add an history event
-            data = {}
-            if event.event_type == 'TIMEPERIOD':
-                data = {
-                    "host_name": 'n/a',
-                    "service_name": 'n/a',
-                    "user_name": "Alignak",
-                    "type": "monitoring.timeperiod_transition",
-                    "message": brok.data['message'],
-                }
+        try:
+            event = LogEvent(('[%s] ' % int(time.time())) + brok.data['message'])
+            if event.valid:
+                # -------------------------------------------
+                # Add an history event
+                data = {}
+                if event.event_type == 'TIMEPERIOD':
+                    data = {
+                        "host_name": 'n/a',
+                        "service_name": 'n/a',
+                        "user_name": "Alignak",
+                        "type": "monitoring.timeperiod_transition",
+                        "message": brok.data['message'],
+                    }
 
-            if event.event_type == 'NOTIFICATION':
-                data = {
-                    "host_name": event.data['hostname'],
-                    "service_name": event.data['service_desc'] or 'n/a',
-                    "user_name": "Alignak",
-                    "type": "monitoring.notification",
-                    "message": brok.data['message'],
-                }
+                if event.event_type == 'NOTIFICATION':
+                    data = {
+                        "host_name": event.data['hostname'],
+                        "service_name": event.data['service_desc'] or 'n/a',
+                        "user_name": "Alignak",
+                        "type": "monitoring.notification",
+                        "message": brok.data['message'],
+                    }
 
-            if event.event_type == 'ALERT':
-                data = {
-                    "host_name": event.data['hostname'],
-                    "service_name": event.data['service_desc'] or 'n/a',
-                    "user_name": "Alignak",
-                    "type": "monitoring.alert",
-                    "message": brok.data['message'],
-                }
+                if event.event_type == 'ALERT':
+                    data = {
+                        "host_name": event.data['hostname'],
+                        "service_name": event.data['service_desc'] or 'n/a',
+                        "user_name": "Alignak",
+                        "type": "monitoring.alert",
+                        "message": brok.data['message'],
+                    }
 
-            if event.event_type == 'DOWNTIME':
-                downtime_type = "monitoring.downtime_start"
-                if event.data['state'] == 'STOPPED':
-                    downtime_type = "monitoring.downtime_end"
-                if event.data['state'] == 'CANCELLED':
-                    downtime_type = "monitoring.downtime_cancelled"
+                if event.event_type == 'DOWNTIME':
+                    downtime_type = "monitoring.downtime_start"
+                    if event.data['state'] == 'STOPPED':
+                        downtime_type = "monitoring.downtime_end"
+                    if event.data['state'] == 'CANCELLED':
+                        downtime_type = "monitoring.downtime_cancelled"
 
-                data = {
-                    "host_name": event.data['hostname'],
-                    "service_name": event.data['service_desc'] or 'n/a',
-                    "user_name": "Alignak",
-                    "type": downtime_type,
-                    "message": brok.data['message'],
-                }
+                    data = {
+                        "host_name": event.data['hostname'],
+                        "service_name": event.data['service_desc'] or 'n/a',
+                        "user_name": "Alignak",
+                        "type": downtime_type,
+                        "message": brok.data['message'],
+                    }
 
-            if event.event_type == 'FLAPPING':
-                flapping_type = "monitoring.flapping_start"
-                if event.data['state'] == 'STOPPED':
-                    flapping_type = "monitoring.flapping_stop"
+                if event.event_type == 'FLAPPING':
+                    flapping_type = "monitoring.flapping_start"
+                    if event.data['state'] == 'STOPPED':
+                        flapping_type = "monitoring.flapping_stop"
 
-                data = {
-                    "host_name": event.data['hostname'],
-                    "service_name": event.data['service_desc'] or 'n/a',
-                    "user_name": "Alignak",
-                    "type": flapping_type,
-                    "message": brok.data['message'],
-                }
+                    data = {
+                        "host_name": event.data['hostname'],
+                        "service_name": event.data['service_desc'] or 'n/a',
+                        "user_name": "Alignak",
+                        "type": flapping_type,
+                        "message": brok.data['message'],
+                    }
 
-            if data:
-                try:
-                    logger.debug("Posting history data: %s", data)
-                    self.backend.post('history', data)
-                except BackendException as exp:
-                    logger.exception("Exception: %s", exp)
-                    logger.error("Exception response: %s", exp.response)
-                    return False
+                if data:
+                    try:
+                        logger.debug("Posting history data: %s", data)
+                        self.backend.post('history', data)
+                    except BackendException as exp:
+                        logger.exception("Exception: %s", exp)
+                        logger.error("Exception response: %s", exp.response)
+                        return False
+                else:
+                    logger.debug("Monitoring event not stored in the backend: %s",
+                                 brok.data['message'])
             else:
-                logger.debug("Monitoring event not stored in the backend: %s", brok.data['message'])
-        else:
-            logger.warning("No monitoring event detected from: %s", brok.data['message'])
+                logger.warning("No monitoring event detected from: %s", brok.data['message'])
+        except ValueError:
+            logger.warning("Unable to decode a monitoring event from: %s", brok.data['message'])
 
         return True
 
