@@ -327,11 +327,18 @@ class TestModuleConnection(AlignakTest):
         b.prepare()
         instance.manage_brok(b)
 
+        b = Brok({'type': 'monitoring_log', 'data': {
+            'level': 'info',
+            'message': "SERVICE COMMENT: pi2;load;alignak;Service comment"
+        }})
+        b.prepare()
+        instance.manage_brok(b)
+
         # Get log file that should contain one line
         with open('./logs2/monitoring-logs.log', 'r') as f:
             data = f.readlines()
         print("Read data: %s" % data)
-        self.assertEqual(12, len(data))
+        self.assertEqual(13, len(data))
         logs = []
         for line in data:
             line = line.replace('ERROR: ', '')
@@ -355,6 +362,7 @@ class TestModuleConnection(AlignakTest):
         assert 'ACTIVE SERVICE CHECK: localhost;Nrpe-status;OK;HARD;1;NRPE v2.15' in data[10]
         assert "PASSIVE SERVICE CHECK: localhost;nsca_uptime;0;OK: uptime: 02:38h, " \
                "boot: 2017-08-31 06:18:03 (UTC)|'uptime'=9508s;2100;90000" in data[11]
+        assert "SERVICE COMMENT: pi2;load;alignak;Service comment" in data[12]
 
         log = logs[2]
         log = log[13:]
@@ -389,7 +397,7 @@ class TestModuleConnection(AlignakTest):
         r = backend.get('history')
         for item in r['_items']:
             print("- %s" % item)
-        self.assertEqual(len(r['_items']), 5)
+        self.assertEqual(len(r['_items']), 6)
 
         assert r['_items'][0]['host_name'] == 'n/a'
         assert r['_items'][0]['service_name'] == 'n/a'
@@ -420,6 +428,12 @@ class TestModuleConnection(AlignakTest):
         assert r['_items'][4]['message'] == 'SERVICE FLAPPING ALERT: lachassagne;I/O stats disk 2;' \
                                             'STARTED; Service appears to have started flapping ' \
                                             '(51.6% change >= 50.0% threshold)'
+
+        assert r['_items'][5]['host_name'] == 'pi2'
+        assert r['_items'][5]['service_name'] == 'load'
+        assert r['_items'][5]['user_name'] == 'alignak'
+        assert r['_items'][5]['type'] == 'webui.comment'
+        assert r['_items'][5]['message'] == 'Service comment'
 
         # Note that RETENTION, CURRENT STATE, and CHECKS monitoring log
         # are not stored as events in the Alignak backend!

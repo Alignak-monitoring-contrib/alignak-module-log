@@ -315,6 +315,15 @@ class MonitoringLogsCollector(BaseModule):
                         "message": brok.data['message'],
                     }
 
+                if event.event_type == 'COMMENT':
+                    data = {
+                        "host_name": event.data['hostname'],
+                        "service_name": event.data['service_desc'] or 'n/a',
+                        "user_name": event.data['author'] or 'Alignak',
+                        "type": "webui.comment",
+                        "message": event.data['comment'],
+                    }
+
                 if data:
                     try:
                         logger.debug("Posting history data: %s", data)
