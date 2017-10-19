@@ -78,11 +78,12 @@ class TestParseLogEvent(AlignakTest):
     def test_comment_service(self):
         self.maxDiff = None
 
-        log = '[1402515279] SERVICE COMMENT: pi2;load;Service comment'
+        log = '[1508398291] INFO: SERVICE COMMENT: mos-0005;Velib;Alignak WS;Keypad: Run Maintenance'
+        log = '[1402515279] SERVICE COMMENT: pi2;load;alignak;Service comment'
         expected = {
             'hostname': 'pi2', 'event_type': 'COMMENT', 'service_desc': 'load',
             'comment_type': 'SERVICE', 'time': 1402515279,
-            'output': 'Service comment'
+            'author': 'alignak', 'comment': 'Service comment'
         }
         event = LogEvent(log)
         print(event)
@@ -91,11 +92,11 @@ class TestParseLogEvent(AlignakTest):
     def test_comment_host(self):
         self.maxDiff = None
 
-        log = '[1402515279] HOST COMMENT: pi2;Host comment'
+        log = '[1402515279] HOST COMMENT: pi2;alignak;Host comment'
         expected = {
             'hostname': 'pi2', 'event_type': 'COMMENT', 'service_desc': None,
             'comment_type': 'HOST', 'time': 1402515279,
-            'output': 'Host comment'
+            'author': 'alignak', 'comment': 'Host comment'
         }
         event = LogEvent(log)
         print(event)
