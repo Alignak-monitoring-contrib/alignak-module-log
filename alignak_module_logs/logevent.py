@@ -198,16 +198,17 @@ EVENT_TYPES = {
     },
     'COMMENT': {
         # ex: "[1329144231] SERVICE COMMENT:
-        #  dfw01-is02-006;cpu load maui;Comment text"
+        #  dfw01-is02-006;cpu load maui;author;Comment text"
         'pattern': r'^\[([0-9]{10})] (HOST|SERVICE) (COMMENT): '
-                   r'([^\;]*);(?:([^\;]*);)?([^\;]*)',
+                   r'([^\;]*);(?:([^\;]*);)?([^\;]*);([^$]*)',
         'properties': [
             'time',
             'comment_type',  # 'SERVICE' (or could be 'HOST')
             'event_type',  # 'COMMENT'
             'hostname',  # 'localhost'
             'service_desc',  # 'cpu load maui' (or could be None)
-            'output',  # 'WARNING - load average: 5.04, 4.67, 5.04'
+            'author',
+            'comment',  # 'WARNING - load average: 5.04, 4.67, 5.04'
         ]
     },
     'ACKNOWLEDGE': {
