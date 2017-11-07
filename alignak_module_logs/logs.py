@@ -36,8 +36,12 @@ from alignak_module_logs.logevent import LogEvent
 
 from alignak_backend_client.client import Backend, BackendException
 
-logger = logging.getLogger('alignak.module')
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+for handler in logger.parent.handlers:
+    if isinstance(handler, logging.StreamHandler):
+        logger.parent.removeHandler(handler)
 
+# pylint: disable=invalid-name
 properties = {
     'daemons': ['broker'],
     'type': 'logs',
@@ -76,8 +80,11 @@ class MonitoringLogsCollector(BaseModule):
         """
         BaseModule.__init__(self, mod_conf)
 
+        # pylint: disable=global-statement
         global logger
         logger = logging.getLogger('alignak.module.%s' % self.alias)
+        # Do not change log level for this module ...
+        # logger.setLevel(getattr(mod_conf, 'log_level', logging.INFO))
 
         logger.debug("inner properties: %s", self.__dict__)
         logger.debug("received configuration: %s", mod_conf.__dict__)
