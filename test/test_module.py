@@ -453,7 +453,7 @@ class TestModules(AlignakTest):
             re.escape(" - rotation every 1 midnight, keeping 365 files"), 6)
 
         # -----
-        # Provide parameters - logger configuration file (exists)
+        # Provide parameters - logger configuration file with a syntax error
         # -----
         # Clear logs
         self.clear_logs()
@@ -778,6 +778,148 @@ class TestModules(AlignakTest):
         #  - 2 existing before module stop and restart,
         #  - 4 broks received after restart
         with open('./logs2/monitoring-logs.log', 'r') as f:
+            data = f.readlines()
+            print(data)
+            self.assertEqual(6, len(data))
+
+        # Stop the module
+        self.modulemanager.clear_instances()
+
+        # And we clear all now
+        self.modulemanager.stop_all()
+        # Stopping module logs
+
+    def test_module_zzz_logger_json_configuration_date_format(self):
+        """Test the module with a logger configured with a json file - set date formatting
+        :return:
+        """
+        self.print_header()
+        # Obliged to call to get a self.logger...
+        self.setup_with_file('cfg/cfg_default.cfg')
+        self.assertTrue(self.conf_is_correct)
+
+        if not os.path.exists('./logs3'):
+            os.mkdir('./logs3')
+
+        if os.path.exists('./logs3/monitoring-logs.log'):
+            os.remove('./logs3/monitoring-logs.log')
+
+        # Create an Alignak module
+        mod = Module({
+            'module_alias': 'logs',
+            'module_types': 'logs',
+            'python_name': 'alignak_module_logs',
+            'logger_configuration': './mod-logs-logger-datetime.json',
+        })
+
+        # Create the modules manager for a daemon type
+        self.modulemanager = ModulesManager('receiver', None)
+
+        # Load an initialize the modules:
+        #  - load python module
+        #  - get module properties and instances
+        self.modulemanager.load_and_init([mod])
+
+        # Clear logs
+        self.clear_logs()
+
+        my_module = self.modulemanager.instances[0]
+
+        # Start external modules
+        self.modulemanager.start_external_instances()
+
+        # Starting external module logs
+        self.assert_log_match("Trying to initialize module: logs", 0)
+        self.assert_log_match("Starting external module logs", 1)
+        self.assert_log_match("Starting external process for module logs", 2)
+        self.assert_log_match("logs is now started", 3)
+
+        time.sleep(1)
+
+        # Check alive
+        self.assertIsNotNone(my_module.process)
+        self.assertTrue(my_module.process.is_alive())
+
+        time.sleep(1)
+
+        instance = alignak_module_logs.get_instance(mod)
+        self.assertIsInstance(instance, BaseModule)
+
+        # No more logs because the logger got re-configured... but some files exist
+        self.assertTrue(os.path.exists('./logs3/monitoring-logs.log'))
+        # self.assertTrue(os.path.exists('/tmp/rotating-monitoring.log'))
+        # self.assertTrue(os.path.exists('/tmp/timed-rotating-monitoring.log'))
+        time.sleep(5)
+        # On Travis build this assertion fails !
+        # self.assertTrue(os.path.exists('/tmp/monitoring-logs.log'))
+
+        b = Brok({'type': 'monitoring_log', 'data': {'level': 'info', 'message': 'test message'}})
+        b.prepare()
+        instance.manage_brok(b)
+
+        b = Brok({'type': 'monitoring_log', 'data': {'level': 'info',
+                                                     'message': 'test message\r\nlong output'}})
+        b.prepare()
+        instance.manage_brok(b)
+
+        # Get the monitoring logs log file that should contain only two lines
+        with open('./logs3/monitoring-logs.log', 'r') as f:
+            data = f.readlines()
+            print(data)
+            # Only two lines, even if a message has a \r
+            self.assertEqual(2, len(data))
+
+        # Stop the module
+        self.modulemanager.clear_instances()
+
+        self.show_logs()
+        self.assert_log_match("Trying to initialize module: logs", 0)
+        self.assert_log_match("Starting external module logs", 1)
+        self.assert_log_match("Starting external process for module logs", 2)
+        self.assert_log_match("logs is now started", 3)
+        self.assert_log_match("Give an instance of alignak_module_logs for alias: logs", 4)
+        self.assert_log_match("logger configuration defined in ./mod-logs-logger-datetime.json", 5)
+        self.assert_log_match("Alignak Backend is not configured. "
+                              "Some module features will not be available.", 6)
+        self.assert_log_match("Request external process to stop for logs", 7)
+        self.assert_log_match("I'm stopping module 'logs'", 8)
+        self.assert_log_match("External process stopped.", 9)
+
+        # Load an initialize the modules:
+        #  - load python module
+        #  - get module properties and instances
+        self.modulemanager.load_and_init([mod])
+
+        my_module = self.modulemanager.instances[0]
+
+        # Start external modules
+        self.modulemanager.start_external_instances()
+
+        self.show_logs()
+
+        b = Brok({'type': 'monitoring_log', 'data': {'level': 'info', 'message': 'test message'}})
+        b.prepare()
+        instance.manage_brok(b)
+
+        b = Brok({'type': 'monitoring_log', 'data': {'level': 'info',
+                                                     'message': 'test message\r\nlong output'}})
+        b.prepare()
+        instance.manage_brok(b)
+
+        b = Brok({'type': 'monitoring_log', 'data': {'level': 'info', 'message': 'test message'}})
+        b.prepare()
+        instance.manage_brok(b)
+
+        b = Brok({'type': 'monitoring_log', 'data': {'level': 'info',
+                                                     'message': 'test message\r\nlong output'}})
+        b.prepare()
+        instance.manage_brok(b)
+
+        # Get the monitoring logs log file that should contain only two lines
+        # 6 lines:
+        #  - 2 existing before module stop and restart,
+        #  - 4 broks received after restart
+        with open('./logs3/monitoring-logs.log', 'r') as f:
             data = f.readlines()
             print(data)
             self.assertEqual(6, len(data))

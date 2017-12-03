@@ -334,11 +334,32 @@ class TestModuleConnection(AlignakTest):
         b.prepare()
         instance.manage_brok(b)
 
+        b = Brok({'type': 'monitoring_log', 'data': {
+            'level': 'info',
+            'message': "HOST COMMENT: test;alignak;Host comment"
+        }})
+        b.prepare()
+        instance.manage_brok(b)
+
+        b = Brok({'type': 'monitoring_log', 'data': {
+            'level': 'info',
+            'message': "HOST COMMENT: test;alignak;Host comment 2"
+        }})
+        b.prepare()
+        instance.manage_brok(b)
+
+        b = Brok({'type': 'monitoring_log', 'data': {
+            'level': 'info',
+            'message': "HOST COMMENT: test;alignak;Host comment 3"
+        }})
+        b.prepare()
+        instance.manage_brok(b)
+
         # Get log file that should contain one line
         with open('./logs2/monitoring-logs.log', 'r') as f:
             data = f.readlines()
         print("Read data: %s" % data)
-        self.assertEqual(13, len(data))
+        self.assertEqual(16, len(data))
         logs = []
         for line in data:
             line = line.replace('ERROR: ', '')
@@ -397,7 +418,7 @@ class TestModuleConnection(AlignakTest):
         r = backend.get('history')
         for item in r['_items']:
             print("- %s" % item)
-        self.assertEqual(len(r['_items']), 6)
+        self.assertEqual(len(r['_items']), 9)
 
         assert r['_items'][0]['host_name'] == 'n/a'
         assert r['_items'][0]['service_name'] == 'n/a'
@@ -434,6 +455,24 @@ class TestModuleConnection(AlignakTest):
         assert r['_items'][5]['user_name'] == 'alignak'
         assert r['_items'][5]['type'] == 'webui.comment'
         assert r['_items'][5]['message'] == 'Service comment'
+
+        assert r['_items'][6]['host_name'] == 'test'
+        assert r['_items'][6]['service_name'] == 'n/a'
+        assert r['_items'][6]['user_name'] == 'alignak'
+        assert r['_items'][6]['type'] == 'webui.comment'
+        assert r['_items'][6]['message'] == 'Host comment'
+
+        assert r['_items'][7]['host_name'] == 'test'
+        assert r['_items'][7]['service_name'] == 'n/a'
+        assert r['_items'][7]['user_name'] == 'alignak'
+        assert r['_items'][7]['type'] == 'webui.comment'
+        assert r['_items'][7]['message'] == 'Host comment 2'
+
+        assert r['_items'][8]['host_name'] == 'test'
+        assert r['_items'][8]['service_name'] == 'n/a'
+        assert r['_items'][8]['user_name'] == 'alignak'
+        assert r['_items'][8]['type'] == 'webui.comment'
+        assert r['_items'][8]['message'] == 'Host comment 3'
 
         # Note that RETENTION, CURRENT STATE, and CHECKS monitoring log
         # are not stored as events in the Alignak backend!
