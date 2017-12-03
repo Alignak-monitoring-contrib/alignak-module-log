@@ -206,6 +206,7 @@ class MonitoringLogsCollector(BaseModule):
         if not self.backend_generate:
             generate = 'disabled'
 
+        self.backend_available = False
         try:
             if not self.backend.authenticated:
                 logger.info("Signing-in to the backend...")
@@ -219,7 +220,6 @@ class MonitoringLogsCollector(BaseModule):
             logger.warning("Alignak backend is currently not available.")
             logger.warning("Exception: %s", exp)
             logger.warning("Response: %s", exp.response)
-            self.backend_available = False
 
     def do_loop_turn(self):  # pragma: no cover
         """This function is present because of an abstract function in the BaseModule class"""
