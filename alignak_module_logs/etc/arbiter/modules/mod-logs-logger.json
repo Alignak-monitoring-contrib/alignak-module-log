@@ -20,8 +20,6 @@
             "level": "INFO",
             "formatter": "local",
             "filename": "ALIGNAKLOG/rotating-monitoring.log",
-            "when": "midnight",
-            "interval": 1,
             "backupCount": 7,
             "encoding": "utf8"
         },
@@ -57,6 +55,6 @@
 
     "root": {
         "level": "INFO",
-        "handlers": ["console", "timed_rotating_file_handler"]
+        "handlers": ["console"]
     }
 }
