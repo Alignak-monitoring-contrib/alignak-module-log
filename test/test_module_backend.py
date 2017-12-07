@@ -114,6 +114,7 @@ class TestModuleConnection(AlignakTest):
             'password': 'admin',
         }))
         self.assertTrue(mod.backend_available)
+        self.assertTrue(mod.backend_connected)
 
     def test_connection_refused(self):
         """ Test module backend connection refused """
@@ -124,6 +125,7 @@ class TestModuleConnection(AlignakTest):
             'python_name': 'alignak_module_logs',
             'logger_configuration': './mod-logs-logger.json',
         }))
+        self.assertFalse(mod.backend_connected)
         self.assertFalse(mod.backend_available)
 
         # Backend bad URL

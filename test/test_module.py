@@ -127,10 +127,10 @@ class TestModules(AlignakTest):
             "Loaded Python module 'alignak_module_logs' (logs)"
         ), i)
         i += 1
-        self.assert_log_match(re.escape(
-            "Give an instance of alignak_module_logs for alias: logs"
-        ), i)
-        i += 1
+        # self.assert_log_match(re.escape(
+        #     "Give an instance of alignak_module_logs for alias: logs"
+        # ), i)
+        # i += 1
         self.assert_log_match(re.escape(
             "logger default configuration:"
         ), i)
@@ -148,9 +148,12 @@ class TestModules(AlignakTest):
         ), i)
         i += 1
         self.assert_log_match(re.escape(
-            "Alignak Backend is not configured. Some module features will not be available."
+            "StatsD configuration: localhost:8125, prefix: alignak, enabled: False"
         ), i)
         i += 1
+        self.assert_log_match(re.escape(
+            "Alignak Backend is not configured. Some module features will not be available."
+        ), i)
 
         time.sleep(1)
         # Reload the module
@@ -178,10 +181,10 @@ class TestModules(AlignakTest):
             "Loaded Python module 'alignak_module_logs' (logs)"
         ), i)
         i += 1
-        self.assert_log_match(re.escape(
-            "Give an instance of alignak_module_logs for alias: logs"
-        ), i)
-        i += 1
+        # self.assert_log_match(re.escape(
+        #     "Give an instance of alignak_module_logs for alias: logs"
+        # ), i)
+        # i += 1
         self.assert_log_match(re.escape(
             "logger default configuration:"
         ), i)
@@ -196,6 +199,10 @@ class TestModules(AlignakTest):
         i += 1
         self.assert_log_match(re.escape(
             " - rotation every 1 midnight, keeping 365 files"
+        ), i)
+        i += 1
+        self.assert_log_match(re.escape(
+            "StatsD configuration: localhost:8125, prefix: alignak, enabled: False"
         ), i)
         i += 1
         self.assert_log_match(re.escape(
@@ -246,6 +253,10 @@ class TestModules(AlignakTest):
         i += 1
         self.assert_log_match(re.escape(
             " - rotation every 1 midnight, keeping 365 files"
+        ), i)
+        i += 1
+        self.assert_log_match(re.escape(
+            "StatsD configuration: localhost:8125, prefix: alignak, enabled: False"
         ), i)
         i += 1
         self.assert_log_match(re.escape(
@@ -765,17 +776,31 @@ class TestModules(AlignakTest):
         self.modulemanager.clear_instances()
 
         self.show_logs()
-        self.assert_log_match("Trying to initialize module: logs", 0)
-        self.assert_log_match("Starting external module logs", 1)
-        self.assert_log_match("Starting external process for module logs", 2)
-        self.assert_log_match("logs is now started", 3)
-        self.assert_log_match("Give an instance of alignak_module_logs for alias: logs", 4)
-        self.assert_log_match("logger configuration defined in ./mod-logs-logger.json", 5)
+        i = 0
+        self.assert_log_match("Trying to initialize module: logs", i)
+        i += 1
+        self.assert_log_match("Starting external module logs", i)
+        i += 1
+        self.assert_log_match("Starting external process for module logs", i)
+        i += 1
+        self.assert_log_match("logs is now started", i)
+        i += 1
+        # self.assert_log_match("Give an instance of alignak_module_logs for alias: logs", i)
+        i += 1
+        self.assert_log_match("logger configuration defined in ./mod-logs-logger.json", i)
+        i += 1
+        self.assert_log_match("StatsD configuration: localhost:8125, "
+                              "prefix: alignak, enabled: False", i)
+        i += 1
         self.assert_log_match("Alignak Backend is not configured. "
-                              "Some module features will not be available.", 6)
-        self.assert_log_match("Request external process to stop for logs", 7)
-        self.assert_log_match("I'm stopping module 'logs'", 8)
-        self.assert_log_match("External process stopped.", 9)
+                              "Some module features will not be available.", i)
+        i += 1
+        self.assert_log_match("Request external process to stop for logs", i)
+        i += 1
+        self.assert_log_match("I'm stopping module 'logs'", i)
+        i += 1
+        self.assert_log_match("External process stopped.", i)
+        i += 1
 
         # Load an initialize the modules:
         #  - load python module
@@ -907,17 +932,31 @@ class TestModules(AlignakTest):
         self.modulemanager.clear_instances()
 
         self.show_logs()
-        self.assert_log_match("Trying to initialize module: logs", 0)
-        self.assert_log_match("Starting external module logs", 1)
-        self.assert_log_match("Starting external process for module logs", 2)
-        self.assert_log_match("logs is now started", 3)
-        self.assert_log_match("Give an instance of alignak_module_logs for alias: logs", 4)
-        self.assert_log_match("logger configuration defined in ./mod-logs-logger-datetime.json", 5)
+        i = 0
+        self.assert_log_match("Trying to initialize module: logs", i)
+        i += 1
+        self.assert_log_match("Starting external module logs", i)
+        i += 1
+        self.assert_log_match("Starting external process for module logs", i)
+        i += 1
+        self.assert_log_match("logs is now started", i)
+        i += 1
+        self.assert_log_match("Give an instance of alignak_module_logs for alias: logs", i)
+        i += 1
+        self.assert_log_match("logger configuration defined in ./mod-logs-logger-datetime.json", i)
+        i += 1
+        self.assert_log_match("StatsD configuration: localhost:8125, "
+                              "prefix: alignak, enabled: False", i)
+        i += 1
         self.assert_log_match("Alignak Backend is not configured. "
-                              "Some module features will not be available.", 6)
-        self.assert_log_match("Request external process to stop for logs", 7)
-        self.assert_log_match("I'm stopping module 'logs'", 8)
-        self.assert_log_match("External process stopped.", 9)
+                              "Some module features will not be available.", i)
+        i += 1
+        self.assert_log_match("Request external process to stop for logs", i)
+        i += 1
+        self.assert_log_match("I'm stopping module 'logs'", i)
+        i += 1
+        self.assert_log_match("External process stopped.", i)
+        i += 1
 
         # Load an initialize the modules:
         #  - load python module

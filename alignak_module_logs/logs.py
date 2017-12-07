@@ -31,6 +31,7 @@ from logging import Formatter
 from logging.handlers import TimedRotatingFileHandler
 from logging.config import dictConfig as logger_dictConfig
 
+from alignak.stats import Stats
 from alignak.basemodule import BaseModule
 from alignak_module_logs.logevent import LogEvent
 
@@ -130,9 +131,22 @@ class MonitoringLogsCollector(BaseModule):
 
         self.setup_logging()
 
+        logger.info("StatsD configuration: %s:%s, prefix: %s, enabled: %s",
+                    getattr(mod_conf, 'statsd_host', 'localhost'),
+                    int(getattr(mod_conf, 'statsd_port', '8125')),
+                    getattr(mod_conf, 'statsd_prefix', 'alignak'),
+                    (getattr(mod_conf, 'statsd_enabled', '0') != '0'))
+        self.statsmgr = Stats()
+        self.statsmgr.register(self.alias, 'module',
+                               statsd_host=getattr(mod_conf, 'statsd_host', 'localhost'),
+                               statsd_port=int(getattr(mod_conf, 'statsd_port', '8125')),
+                               statsd_prefix=getattr(mod_conf, 'statsd_prefix', 'alignak'),
+                               statsd_enabled=(getattr(mod_conf, 'statsd_enabled', '0') != '0'))
+
         # Alignak Backend part
         # ---
         self.backend_available = False
+        self.backend_connected = False
         self.backend_url = getattr(mod_conf, 'alignak_backend', '')
         if self.backend_url:
             logger.info("Alignak backend endpoint: %s", self.backend_url)
@@ -140,19 +154,20 @@ class MonitoringLogsCollector(BaseModule):
             self.client_processes = int(getattr(mod_conf, 'client_processes', '1'))
             logger.info("Number of processes used by backend client: %s", self.client_processes)
 
-            self.backend = Backend(self.backend_url, self.client_processes)
-            # If a backend token is provided in the configuration, we assume that it is valid
-            # and the backend is yet connected and authenticated
-            self.backend.token = getattr(mod_conf, 'token', '')
-            self.backend.authenticated = (self.backend.token != '')
-            self.backend_available = False
-
+            self.backend_connected = False
+            self.backend_connection_retry_planned = 0
+            try:
+                self.backend_connection_retry_delay = int(getattr(mod_conf,
+                                                                  'backend_connection_retry_delay',
+                                                                  '10'))
+            except ValueError:
+                self.backend_connection_retry_delay = 10
+            self.backend_errors_count = 0
             self.backend_username = getattr(mod_conf, 'username', '')
             self.backend_password = getattr(mod_conf, 'password', '')
             self.backend_generate = getattr(mod_conf, 'allowgeneratetoken', False)
-
-            self.alignak_backend_polling_period = \
-                int(getattr(mod_conf, 'alignak_backend_polling_period', '10'))
+            self.backend_token = getattr(mod_conf, 'token', '')
+            self.backend = Backend(self.backend_url, self.client_processes)
 
             if not self.backend.token and not self.backend_username:
                 logger.warning("No Alignak backend credentials configured (empty token and "
@@ -160,7 +175,14 @@ class MonitoringLogsCollector(BaseModule):
                                "The requested backend connection will not be available")
                 self.backend_url = ''
             else:
-                self.getBackendAvailability()
+                # Log in to the backend
+                self.logged_in = False
+                self.backend_connected = self.backend_connection()
+                self.backend_available = self.backend_connected
+
+                # Get the default realm
+                self.default_realm = self.get_default_realm()
+
         else:
             logger.warning('Alignak Backend is not configured. '
                            'Some module features will not be available.')
@@ -204,29 +226,86 @@ class MonitoringLogsCollector(BaseModule):
                 logger.error("Logger configuration file is not parsable correctly!")
                 logger.exception(exp)
 
-    def getBackendAvailability(self):
-        """Authenticate and get the token
+    def backend_connection(self):
+        """Backend connection to check live state update is allowed
 
-        :return: None
+        :return: True/False
+        """
+        if self.backend_login():
+            self.get_default_realm()
+
+            try:
+                start = time.time()
+                params = {'where': '{"token":"%s"}' % self.backend.token}
+                users = self.backend.get('user', params)
+                self.statsmgr.counter('backend-get.user', 1)
+                self.statsmgr.timer('backend-get-time.user', time.time() - start)
+            except BackendException as exp:
+                logger.warning("Error on backend when retrieving user information: %s", exp)
+            else:
+                try:
+                    for item in users['_items']:
+                        self.logged_in = item['can_update_livestate']
+                    return self.logged_in
+                except Exception as exp:
+                    logger.error("Can't get the user information in the backend response: %s", exp)
+
+        logger.error("Configured user account is not allowed for this module")
+        return False
+
+    def backend_login(self):
+        """Log in to the backend
+
+        :return: bool
         """
         generate = 'enabled'
         if not self.backend_generate:
             generate = 'disabled'
 
-        self.backend_available = False
-        try:
-            if not self.backend.authenticated:
-                logger.info("Signing-in to the backend...")
-                self.backend_available = self.backend.login(self.backend_username,
-                                                            self.backend_password, generate)
-            logger.debug("Checking backend availability, token: %s, authenticated: %s",
-                         self.backend.token, self.backend.authenticated)
-            self.backend.get('/realm', {'where': json.dumps({'name': 'All'})})
-            self.backend_available = True
-        except BackendException as exp:
-            logger.warning("Alignak backend is currently not available.")
-            logger.warning("Exception: %s", exp)
-            logger.warning("Response: %s", exp.response)
+        if self.backend_token:
+            # We have a token, don't ask for a new one
+            self.backend.token = self.backend_token
+            connected = True  # Not really yet, but assume yes
+        else:
+            if not self.backend_username or not self.backend_password:
+                logger.error("No user or password supplied, and no default token defined. "
+                             "Can't connect to backend")
+                connected = False
+            else:
+                try:
+                    start = time.time()
+                    connected = self.backend.login(self.backend_username, self.backend_password,
+                                                   generate)
+                    self.statsmgr.counter('backend-login', 1)
+                    self.statsmgr.timer('backend-login-time', time.time() - start)
+                except BackendException as exp:
+                    logger.error("Error on backend login: %s", exp)
+                    connected = False
+
+        return connected
+
+    def get_default_realm(self):
+        """
+        Retrieves the default top level realm for the connected user
+        :return: str or None
+        """
+        default_realm = None
+
+        if self.backend_connected:
+            try:
+                start = time.time()
+                result = self.backend.get('/realm', {'max_results': 1, 'sort': '_level'})
+                self.statsmgr.counter('backend-get.realm', 1)
+                self.statsmgr.timer('backend-get-time.realm', time.time() - start)
+            except BackendException as exp:
+                logger.warning("Error on backend when retrieving default realm: %s", exp)
+            else:
+                try:
+                    default_realm = result['_items'][0]['_id']
+                except Exception as exp:
+                    logger.error("Can't get the default realm in the backend response: %s", exp)
+
+        return default_realm
 
     def do_loop_turn(self):  # pragma: no cover
         """This function is present because of an abstract function in the BaseModule class"""
@@ -257,7 +336,14 @@ class MonitoringLogsCollector(BaseModule):
         func = getattr(self.logger, level)
         func(message)
 
-        if not self.backend_available:
+        if not self.backend_url:
+            return False
+
+        if not self.backend_connected and int(time.time() > self.backend_connection_retry_planned):
+            self.backend_connected = self.backend_connection()
+
+        if not self.backend_connected:
+            logger.error("Alignak backend connection is not available. Ignoring event.")
             return False
 
         # Try to get a monitoring event
@@ -266,6 +352,8 @@ class MonitoringLogsCollector(BaseModule):
             if event.valid:
                 # -------------------------------------------
                 # Add an history event
+                self.statsmgr.counter('monitoring-event-get.%s' % event.event_type, 1)
+
                 data = {}
                 if event.event_type == 'TIMEPERIOD':
                     data = {
@@ -334,12 +422,16 @@ class MonitoringLogsCollector(BaseModule):
                 if data:
                     try:
                         logger.debug("Posting history data: %s", data)
+                        start = time.time()
                         self.backend.post('history', data)
+                        self.statsmgr.counter('monitoring-event-stored.%s' % event.event_type, 1)
+                        self.statsmgr.timer('backend-post-time.history', time.time() - start)
                     except BackendException as exp:
                         logger.exception("Exception: %s", exp)
                         logger.error("Exception response: %s", exp.response)
                         return False
                 else:
+                    self.statsmgr.counter('monitoring-event-ignored.%s' % event.event_type, 1)
                     logger.debug("Monitoring event not stored in the backend: %s",
                                  brok.data['message'])
             else:
@@ -363,16 +455,20 @@ class MonitoringLogsCollector(BaseModule):
 
         while not self.interrupted:
             try:
-                logger.debug("queue length: %s", self.to_q.qsize())
-                start = time.time()
+                queue_size = self.to_q.qsize()
+                if queue_size:
+                    logger.debug("queue length: %s", queue_size)
+                    self.statsmgr.gauge('queue-size', queue_size)
 
                 message = self.to_q.get_nowait()
+                start = time.time()
                 for brok in message:
                     # Prepare and manage each brok in the queue message
                     brok.prepare()
                     self.manage_brok(brok)
 
                 logger.debug("time to manage %s broks (%d secs)", len(message), time.time() - start)
+                self.statsmgr.timer('managed-broks-time', time.time() - start)
             except Queue.Empty:
                 # logger.debug("No message in the module queue")
                 time.sleep(0.1)

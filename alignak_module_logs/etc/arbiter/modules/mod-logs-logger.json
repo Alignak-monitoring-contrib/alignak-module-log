@@ -40,7 +40,7 @@
             "filename": "ALIGNAKLOG/monitoring-logs.log",
             "when": "midnight",
             "interval": 1,
-            "backupCount": 30,
+            "backupCount": 365,
             "encoding": "utf8"
         }
     },
