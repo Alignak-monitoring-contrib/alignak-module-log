@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak contrib team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2048: Alignak contrib team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak contrib projet.
 #
@@ -33,9 +33,10 @@ from logging.config import dictConfig as logger_dictConfig
 
 from alignak.stats import Stats
 from alignak.basemodule import BaseModule
-from alignak_module_logs.logevent import LogEvent
 
 from alignak_backend_client.client import Backend, BackendException
+
+from alignak_module_logs.logevent import LogEvent
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 for handler in logger.parent.handlers:
@@ -62,7 +63,8 @@ def get_instance(mod_conf):
     :param mod_conf: the module properties as defined globally in this file
     :return:
     """
-    logger.info("Give an instance of %s for alias: %s", mod_conf.python_name, mod_conf.module_alias)
+    # logger.info("Give an instance of %s for alias: %s",
+    # mod_conf.python_name, mod_conf.module_alias)
 
     return MonitoringLogsCollector(mod_conf)
 
@@ -97,6 +99,9 @@ class MonitoringLogsCollector(BaseModule):
         self.logger_configuration = os.getenv('ALIGNAK_MONITORING_LOGS_CFG', None)
         if not self.logger_configuration:
             self.logger_configuration = getattr(mod_conf, 'logger_configuration', None)
+        if self.logger_configuration and self.logger_configuration != \
+                os.path.abspath(self.logger_configuration):
+            self.logger_configuration = os.path.abspath(self.logger_configuration)
 
         # Logger default parameters (used if logger_configuration is not defined)
         self.default_configuration = True
@@ -119,8 +124,8 @@ class MonitoringLogsCollector(BaseModule):
             self.default_configuration = False
             if not os.path.exists(self.logger_configuration):
                 self.default_configuration = True
-                logger.warning("defined logger configuration file does not exist! "
-                               "Using default configuration.")
+                logger.warning("defined logger configuration file (%s) does not exist! "
+                               "Using default configuration.", self.logger_configuration)
 
         if self.default_configuration:
             logger.info("logger default configuration:")
@@ -218,8 +223,13 @@ class MonitoringLogsCollector(BaseModule):
                 self.logger.addHandler(file_handler)
                 logger.debug("Logger (default), added a TimedRotatingFileHandler")
         else:
-            with open(self.logger_configuration, 'rt') as f:
-                config = json.load(f)
+            with open(self.logger_configuration, 'rt') as my_logger_configuration_file:
+                config = json.load(my_logger_configuration_file)
+                # Update the declared log file names with the log directory
+                for hdlr in config['handlers']:
+                    if 'filename' in config['handlers'][hdlr]:
+                        config['handlers'][hdlr]['filename'] = \
+                            config['handlers'][hdlr]['filename'].replace("%(logdir)s", self.log_dir)
             try:
                 logger_dictConfig(config)
             except ValueError as exp:

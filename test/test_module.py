@@ -127,10 +127,10 @@ class TestModules(AlignakTest):
             "Loaded Python module 'alignak_module_logs' (logs)"
         ), i)
         i += 1
-        # self.assert_log_match(re.escape(
-        #     "Give an instance of alignak_module_logs for alias: logs"
-        # ), i)
-        # i += 1
+        self.assert_log_match(re.escape(
+            "Alignak starting module 'logs'"
+        ), i)
+        i += 1
         self.assert_log_match(re.escape(
             "logger default configuration:"
         ), i)
@@ -181,10 +181,10 @@ class TestModules(AlignakTest):
             "Loaded Python module 'alignak_module_logs' (logs)"
         ), i)
         i += 1
-        # self.assert_log_match(re.escape(
-        #     "Give an instance of alignak_module_logs for alias: logs"
-        # ), i)
-        # i += 1
+        self.assert_log_match(re.escape(
+            "Alignak starting module 'logs'"
+        ), i)
+        i += 1
         self.assert_log_match(re.escape(
             "logger default configuration:"
         ), i)
@@ -236,9 +236,13 @@ class TestModules(AlignakTest):
         ), i)
         i += 1
         self.assert_log_match(re.escape(
-            "Give an instance of alignak_module_logs for alias: logs"
+            "Alignak starting module 'logs'"
         ), i)
         i += 1
+        # self.assert_log_match(re.escape(
+        #     "Give an instance of alignak_module_logs for alias: logs"
+        # ), i)
+        # i += 1
         self.assert_log_match(re.escape(
             "logger default configuration:"
         ), i)
@@ -406,16 +410,16 @@ class TestModules(AlignakTest):
         instance = alignak_module_logs.get_instance(mod)
         self.assertIsInstance(instance, BaseModule)
 
+        # self.assert_log_match(
+        #     re.escape("Give an instance of alignak_module_logs for alias: logs"), 0)
         self.assert_log_match(
-            re.escape("Give an instance of alignak_module_logs for alias: logs"), 0)
+            re.escape("logger default configuration:"), 0)
         self.assert_log_match(
-            re.escape("logger default configuration:"), 1)
+            re.escape(" - rotating logs in /tmp/monitoring-logs.log"), 1)
         self.assert_log_match(
-            re.escape(" - rotating logs in /tmp/monitoring-logs.log"), 2)
+            re.escape(" - log level: 20"), 2)
         self.assert_log_match(
-            re.escape(" - log level: 20"), 3)
-        self.assert_log_match(
-            re.escape(" - rotation every 1 midnight, keeping 365 files"), 4)
+            re.escape(" - rotation every 1 midnight, keeping 365 files"), 3)
 
     def test_module_start_parameters_1(self):
         """Test the module initialization function, no parameters, provide parameters
@@ -447,16 +451,16 @@ class TestModules(AlignakTest):
         instance = alignak_module_logs.get_instance(mod)
         self.assertIsInstance(instance, BaseModule)
 
+        # self.assert_log_match(
+        #     re.escape("Give an instance of alignak_module_logs for alias: logs"), 0)
         self.assert_log_match(
-            re.escape("Give an instance of alignak_module_logs for alias: logs"), 0)
+            re.escape("logger default configuration:"), 0)
         self.assert_log_match(
-            re.escape("logger default configuration:"), 1)
+            re.escape(" - rotating logs in /my_dir/test.log"), 1)
         self.assert_log_match(
-            re.escape(" - rotating logs in /my_dir/test.log"), 2)
+            re.escape(" - log level: 30"), 2)
         self.assert_log_match(
-            re.escape(" - log level: 30"), 3)
-        self.assert_log_match(
-            re.escape(" - rotation every 5 d, keeping 10 files"), 4)
+            re.escape(" - rotation every 5 d, keeping 10 files"), 3)
 
     def test_module_start_parameters_2(self):
         """Test the module initialization function, no parameters, provide parameters
@@ -481,21 +485,21 @@ class TestModules(AlignakTest):
         instance = alignak_module_logs.get_instance(mod)
         self.assertIsInstance(instance, BaseModule)
 
+        # self.assert_log_match(
+        #     re.escape("Give an instance of alignak_module_logs for alias: logs"), 0)
         self.assert_log_match(
-            re.escape("Give an instance of alignak_module_logs for alias: logs"), 0)
+            re.escape("logger configuration defined in %s" % os.path.abspath('not_found.json')), 0)
         self.assert_log_match(
-            re.escape("logger configuration defined in not_found.json"), 1)
+            re.escape("defined logger configuration file (%s) does not exist! "
+                      "Using default configuration." % os.path.abspath('not_found.json')), 1)
         self.assert_log_match(
-            re.escape("defined logger configuration file does not exist! "
-                      "Using default configuration."), 2)
+            re.escape("logger default configuration:"), 2)
         self.assert_log_match(
-            re.escape("logger default configuration:"), 3)
+            re.escape(" - rotating logs in /tmp/monitoring-logs.log"), 3)
         self.assert_log_match(
-            re.escape(" - rotating logs in /tmp/monitoring-logs.log"), 4)
+            re.escape(" - log level: 20"), 4)
         self.assert_log_match(
-            re.escape(" - log level: 20"), 5)
-        self.assert_log_match(
-            re.escape(" - rotation every 1 midnight, keeping 365 files"), 6)
+            re.escape(" - rotation every 1 midnight, keeping 365 files"), 5)
 
         # -----
         # Provide parameters - logger configuration file with a syntax error
@@ -514,15 +518,16 @@ class TestModules(AlignakTest):
         instance = alignak_module_logs.get_instance(mod)
         self.assertIsInstance(instance, BaseModule)
 
+        # self.assert_log_match(
+        #     re.escape("Give an instance of alignak_module_logs for alias: logs"), 0)
         self.assert_log_match(
-            re.escape("Give an instance of alignak_module_logs for alias: logs"), 0)
+            re.escape("logger configuration defined in %s"
+                      % os.path.abspath('./mod-logs-logger_syntax.json')), 0)
         self.assert_log_match(
-            re.escape("logger configuration defined in ./mod-logs-logger_syntax.json"), 1)
-        self.assert_log_match(
-            re.escape("Logger configuration file is not parsable correctly!"), 2)
+            re.escape("Logger configuration file is not parsable correctly!"), 1)
         self.assert_log_match(
             re.escape("Unable to configure root logger: "
-                      "Unable to add handler u'console': u'console'"), 3)
+                      "Unable to add handler u'console': u'console'"), 2)
 
         # -----
         # Provide parameters - logger configuration file (exists)
@@ -637,11 +642,11 @@ class TestModules(AlignakTest):
         self.assert_log_match("Starting external module logs", 1)
         self.assert_log_match("Starting external process for module logs", 2)
         self.assert_log_match("logs is now started", 3)
-        self.assert_log_match("Give an instance of alignak_module_logs for alias: logs", 4)
-        self.assert_log_match("logger default configuration", 5)
-        self.assert_log_match(" - rotating logs in ./logs1/monitoring-logs.log", 6)
-        self.assert_log_match(" - log level: 20", 7)
-        self.assert_log_match(" - rotation every 1 midnight, keeping 365 files", 8)
+        # self.assert_log_match("Give an instance of alignak_module_logs for alias: logs", 4)
+        self.assert_log_match("logger default configuration", 4)
+        self.assert_log_match(" - rotating logs in ./logs1/monitoring-logs.log", 5)
+        self.assert_log_match(" - log level: 20", 6)
+        self.assert_log_match(" - rotation every 1 midnight, keeping 365 files", 7)
 
         # Load an initialize the modules:
         #  - load python module
@@ -786,8 +791,10 @@ class TestModules(AlignakTest):
         self.assert_log_match("logs is now started", i)
         i += 1
         # self.assert_log_match("Give an instance of alignak_module_logs for alias: logs", i)
-        i += 1
-        self.assert_log_match("logger configuration defined in ./mod-logs-logger.json", i)
+        # i += 1
+        self.assert_log_match(
+            re.escape("logger configuration defined in %s"
+                      % os.path.abspath('./mod-logs-logger.json')), i)
         i += 1
         self.assert_log_match("StatsD configuration: localhost:8125, "
                               "prefix: alignak, enabled: False", i)
@@ -941,9 +948,11 @@ class TestModules(AlignakTest):
         i += 1
         self.assert_log_match("logs is now started", i)
         i += 1
-        self.assert_log_match("Give an instance of alignak_module_logs for alias: logs", i)
-        i += 1
-        self.assert_log_match("logger configuration defined in ./mod-logs-logger-datetime.json", i)
+        # self.assert_log_match("Give an instance of alignak_module_logs for alias: logs", i)
+        # i += 1
+        self.assert_log_match(
+            re.escape("logger configuration defined in %s"
+                      % os.path.abspath('./mod-logs-logger-datetime.json')), i)
         i += 1
         self.assert_log_match("StatsD configuration: localhost:8125, "
                               "prefix: alignak, enabled: False", i)
