@@ -118,23 +118,27 @@ class MonitoringLogsCollector(BaseModule):
                                   '[%(created)i] %(levelname)s: %(message)s')
         self.log_date = getattr(mod_conf, 'log_date', '%Y-%m-%d %H:%M:%S %Z')
 
-        if self.logger_configuration:
-            logger.info("logger configuration defined in %s",
-                        self.logger_configuration)
-            self.default_configuration = False
-            if not os.path.exists(self.logger_configuration):
-                self.default_configuration = True
-                logger.warning("defined logger configuration file (%s) does not exist! "
-                               "Using default configuration.", self.logger_configuration)
+        if not self.logger_configuration and not self.log_dir and not self.log_file:
+            logger.info("The logging feature is disabled")
+        else:
+            if self.logger_configuration:
+                logger.info("logger configuration defined in %s",
+                            self.logger_configuration)
+                self.default_configuration = False
+                if not os.path.exists(self.logger_configuration):
+                    self.default_configuration = True
+                    logger.warning("defined logger configuration file (%s) does not exist! "
+                                   "Using default configuration.", self.logger_configuration)
 
-        if self.default_configuration:
-            logger.info("logger default configuration:")
-            logger.info(" - rotating logs in %s", self.log_filename)
-            logger.info(" - log level: %s", self.log_level)
-            logger.info(" - rotation every %d %s, keeping %s files",
-                        self.log_rotation_interval, self.log_rotation_when, self.log_rotation_count)
+            if self.default_configuration:
+                logger.info("logger default configuration:")
+                logger.info(" - rotating logs in %s", self.log_filename)
+                logger.info(" - log level: %s", self.log_level)
+                logger.info(" - rotation every %d %s, keeping %s files",
+                            self.log_rotation_interval, self.log_rotation_when,
+                            self.log_rotation_count)
 
-        self.setup_logging()
+            self.setup_logging()
 
         logger.info("StatsD configuration: %s:%s, prefix: %s, enabled: %s",
                     getattr(mod_conf, 'statsd_host', 'localhost'),
@@ -340,11 +344,12 @@ class MonitoringLogsCollector(BaseModule):
         logger.debug("Got monitoring log brok: %s", brok)
 
         # Send to configured logger
-        message = brok.data['message']
-        message = message.replace('\r', '\\r')
-        message = message.replace('\n', '\\n')
-        func = getattr(self.logger, level)
-        func(message)
+        if self.logger:
+            message = brok.data['message']
+            message = message.replace('\r', '\\r')
+            message = message.replace('\n', '\\n')
+            func = getattr(self.logger, level)
+            func(message)
 
         if not self.backend_url:
             return False

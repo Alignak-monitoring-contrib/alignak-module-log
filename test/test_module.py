@@ -25,7 +25,7 @@ Test the module
 import re
 import os
 import time
-from alignak_test import AlignakTest, time_hacker
+from alignak_test import AlignakTest
 from alignak.modulesmanager import ModulesManager
 from alignak.objects.module import Module
 from alignak.basemodule import BaseModule
@@ -88,8 +88,6 @@ class TestModules(AlignakTest):
         self.setup_with_file('cfg/cfg_default.cfg')
         self.assertTrue(self.conf_is_correct)
         self.clear_logs()
-
-        time_hacker.set_real_time()
 
         # Create an Alignak module
         mod = Module({
@@ -463,7 +461,7 @@ class TestModules(AlignakTest):
             re.escape(" - rotation every 5 d, keeping 10 files"), 3)
 
     def test_module_start_parameters_2(self):
-        """Test the module initialization function, no parameters, provide parameters
+        """Test the module initialization function, logger configuration file not found
         :return:
         """
         self.print_header()
@@ -692,6 +690,72 @@ class TestModules(AlignakTest):
 
         # Stop the module
         self.modulemanager.clear_instances()
+
+        # And we clear all now
+        self.modulemanager.stop_all()
+        # Stopping module logs
+
+    def test_module_zzz_no_logging(self):
+        """Test the module with no logging feature
+        :return:
+        """
+        self.print_header()
+        # Obliged to call to get a self.logger...
+        self.setup_with_file('cfg/cfg_default.cfg')
+        self.assertTrue(self.conf_is_correct)
+
+        # Create an Alignak module
+        mod = Module({
+            'module_alias': 'logs',
+            'module_types': 'logs',
+            'python_name': 'alignak_module_logs',
+            'logger_configuration': '',
+            'log_dir': '',
+            'log_file': ''
+        })
+
+        # Create the modules manager for a daemon type
+        self.modulemanager = ModulesManager('receiver', None)
+
+        # Load an initialize the modules:
+        #  - load python module
+        #  - get module properties and instances
+        self.modulemanager.load_and_init([mod])
+
+        # Clear logs
+        self.clear_logs()
+
+        my_module = self.modulemanager.instances[0]
+
+        # Start external modules
+        self.modulemanager.start_external_instances()
+
+        # Starting external module logs
+        self.assert_log_match("Trying to initialize module: logs", 0)
+        self.assert_log_match("Starting external module logs", 1)
+        self.assert_log_match("Starting external process for module logs", 2)
+        self.assert_log_match("logs is now started", 3)
+
+        time.sleep(1)
+
+        # Check alive
+        self.assertIsNotNone(my_module.process)
+        self.assertTrue(my_module.process.is_alive())
+
+        time.sleep(1)
+
+        instance = alignak_module_logs.get_instance(mod)
+        self.assertIsInstance(instance, BaseModule)
+
+        self.show_logs()
+        self.assert_log_match("Trying to initialize module: logs", 0)
+        self.assert_log_match("Starting external module logs", 1)
+        self.assert_log_match("Starting external process for module logs", 2)
+        self.assert_log_match("logs is now started", 3)
+        # self.assert_log_match("Give an instance of alignak_module_logs for alias: logs", 4)
+        self.assert_log_match("The logging feature is disabled", 4)
+        self.assert_log_match("StatsD configuration: localhost:8125, prefix: alignak, enabled: False", 5)
+        self.assert_log_match("Alignak Backend is not configured. Some module features will not be available.", 6)
 
         # And we clear all now
         self.modulemanager.stop_all()
