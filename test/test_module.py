@@ -50,33 +50,20 @@ class TestModules(AlignakTest):
 
         :return:
         """
-        self.print_header()
         self.setup_with_file('./cfg/cfg_default.cfg')
         self.assertTrue(self.conf_is_correct)
         self.show_configuration_logs()
 
         # No arbiter modules created
-        modules = [m.module_alias for m in self.arbiter.myself.modules]
+        modules = [m.module_alias for m in self._arbiter.link_to_myself.modules]
         self.assertListEqual(modules, [])
 
         # The only existing broker module is logs declared in the configuration
-        modules = [m.module_alias for m in self.brokers['broker-master'].modules]
+        modules = [m.module_alias for m in self._broker_daemon.modules]
         self.assertListEqual(modules, ['logs'])
 
-        # No poller module
-        modules = [m.module_alias for m in self.pollers['poller-master'].modules]
-        self.assertListEqual(modules, [])
-
-        # No receiver module
-        modules = [m.module_alias for m in self.receivers['receiver-master'].modules]
-        self.assertListEqual(modules, [])
-
-        # No reactionner module
-        modules = [m.module_alias for m in self.reactionners['reactionner-master'].modules]
-        self.assertListEqual(modules, [])
-
         # No scheduler modules
-        modules = [m.module_alias for m in self.schedulers['scheduler-master'].modules]
+        modules = [m.module_alias for m in self._scheduler_daemon.modules]
         self.assertListEqual(modules, [])
 
     def test_module_manager(self):
@@ -84,7 +71,6 @@ class TestModules(AlignakTest):
         Test if the module manager manages correctly all the modules
         :return:
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
         self.assertTrue(self.conf_is_correct)
         self.clear_logs()
@@ -97,7 +83,7 @@ class TestModules(AlignakTest):
         })
 
         # Create the modules manager for a daemon type
-        self.modulemanager = ModulesManager('broker', None)
+        self.modulemanager = ModulesManager(self._broker_daemon)
 
         # Load an initialize the modules:
         #  - load python module
@@ -387,7 +373,6 @@ class TestModules(AlignakTest):
         """Test the module initialization function, no parameters, using default
         :return:
         """
-        self.print_header()
         # Obliged to call to get a self.logger...
         self.setup_with_file('cfg/cfg_default.cfg')
         self.assertTrue(self.conf_is_correct)
@@ -423,7 +408,6 @@ class TestModules(AlignakTest):
         """Test the module initialization function, no parameters, provide parameters
         :return:
         """
-        self.print_header()
         # Obliged to call to get a self.logger...
         self.setup_with_file('cfg/cfg_default.cfg')
         self.assertTrue(self.conf_is_correct)
@@ -464,7 +448,6 @@ class TestModules(AlignakTest):
         """Test the module initialization function, logger configuration file not found
         :return:
         """
-        self.print_header()
         # Obliged to call to get a self.logger...
         self.setup_with_file('cfg/cfg_default.cfg')
         self.assertTrue(self.conf_is_correct)
@@ -552,7 +535,6 @@ class TestModules(AlignakTest):
         """Test the module with its default configuration
         :return:
         """
-        self.print_header()
         # Obliged to call to get a self.logger...
         self.setup_with_file('cfg/cfg_default.cfg')
         self.assertTrue(self.conf_is_correct)
@@ -761,11 +743,150 @@ class TestModules(AlignakTest):
         self.modulemanager.stop_all()
         # Stopping module logs
 
+    def test_module_zzz_no_logging(self):
+        """Test the module with a disabled logging feature
+        :return:
+        """
+        # Obliged to call to get a self.logger...
+        self.setup_with_file('cfg/cfg_default.cfg')
+        self.assertTrue(self.conf_is_correct)
+
+        # Create an Alignak module
+        mod = Module({
+            'module_alias': 'logs',
+            'module_types': 'logs',
+            'python_name': 'alignak_module_logs',
+            'logger_configuration': '',
+            'log_logger_name': ''
+        })
+
+        # Create the modules manager for a daemon type
+        self.modulemanager = ModulesManager('receiver', None)
+
+        # Load an initialize the modules:
+        #  - load python module
+        #  - get module properties and instances
+        self.modulemanager.load_and_init([mod])
+
+        # Clear logs
+        self.clear_logs()
+
+        my_module = self.modulemanager.instances[0]
+
+        # Start external modules
+        self.modulemanager.start_external_instances()
+
+        # Starting external module logs
+        self.assert_log_match("Trying to initialize module: logs", 0)
+        self.assert_log_match("Starting external module logs", 1)
+        self.assert_log_match("Starting external process for module logs", 2)
+        self.assert_log_match("logs is now started", 3)
+
+        time.sleep(1)
+
+        # Check alive
+        self.assertIsNotNone(my_module.process)
+        self.assertTrue(my_module.process.is_alive())
+
+        time.sleep(1)
+
+        instance = alignak_module_logs.get_instance(mod)
+        self.assertIsInstance(instance, BaseModule)
+
+        # No more logs because the logger got re-configured... but some files exist
+        time.sleep(1)
+        # fixme: On Travis build this assertion fails if no wait is executed!
+        # but I confirm that locally the file is created and exists!!!
+        # probably that the log file is not yet flushed hen executing?
+        # time.sleep(5)
+        # self.assertTrue(os.path.exists('./logs1/monitoring-logs.log'))
+
+        b = Brok({'type': 'monitoring_log', 'data': {'level': 'info', 'message': 'test message'}})
+        b.prepare()
+        instance.manage_brok(b)
+
+        b = Brok({'type': 'monitoring_log', 'data': {'level': 'info',
+                                                     'message': 'test message\r\nlong output'}})
+        b.prepare()
+        instance.manage_brok(b)
+
+        # fixme: On Travis build this assertion fails!
+        # but I confirm that locally the file is created and exists!!!
+        # probably that the log file is not yet flushed hen executing?
+        # Get the monitoring logs log file that should contain only two lines
+        # with open('./logs1/monitoring-logs.log', 'r') as f:
+        #     data = f.readlines()
+        #     print("line: %s" % data)
+        #     # Only two lines, even if a message has a \r
+        #     self.assertEqual(2, len(data))
+
+        # Stop the module
+        self.modulemanager.clear_instances()
+
+        self.show_logs()
+        self.assert_log_match("Trying to initialize module: logs", 0)
+        self.assert_log_match("Starting external module logs", 1)
+        self.assert_log_match("Starting external process for module logs", 2)
+        self.assert_log_match("logs is now started", 3)
+        # self.assert_log_match("Give an instance of alignak_module_logs for alias: logs", 4)
+        self.assert_log_match("logger default configuration", 4)
+        self.assert_log_match(" - rotating logs in ./logs1/monitoring-logs.log", 5)
+        self.assert_log_match(" - log level: 20", 6)
+        self.assert_log_match(" - rotation every 1 midnight, keeping 365 files", 7)
+
+        # Load an initialize the modules:
+        #  - load python module
+        #  - get module properties and instances
+        self.modulemanager.load_and_init([mod])
+
+        my_module = self.modulemanager.instances[0]
+
+        # Start external modules
+        self.modulemanager.start_external_instances()
+
+        self.show_logs()
+
+        b = Brok({'type': 'monitoring_log', 'data': {'level': 'info', 'message': 'test message'}})
+        b.prepare()
+        instance.manage_brok(b)
+
+        b = Brok({'type': 'monitoring_log', 'data': {'level': 'info',
+                                                     'message': 'test message\r\nlong output'}})
+        b.prepare()
+        instance.manage_brok(b)
+
+        b = Brok({'type': 'monitoring_log', 'data': {'level': 'info', 'message': 'test message'}})
+        b.prepare()
+        instance.manage_brok(b)
+
+        b = Brok({'type': 'monitoring_log', 'data': {'level': 'info',
+                                                     'message': 'test message\r\nlong output'}})
+        b.prepare()
+        instance.manage_brok(b)
+
+        # fixme: On Travis build this assertion fails!
+        # but I confirm that locally the file is created and exists!!!
+        # probably that the log file is not yet flushed hen executing?
+        # Get the monitoring logs log file that should contain only two lines
+        # 6 lines:
+        #  - 2 existing before module stop and restart,
+        #  - 4 broks received after restart
+        # with open('./logs1/monitoring-logs.log', 'r') as f:
+        #     data = f.readlines()
+        #     print(data)
+        #     self.assertEqual(6, len(data))
+
+        # Stop the module
+        self.modulemanager.clear_instances()
+
+        # And we clear all now
+        self.modulemanager.stop_all()
+        # Stopping module logs
+
     def test_module_zzz_logger_json_configuration(self):
         """Test the module with a logger configured with a json file
         :return:
         """
-        self.print_header()
         # Obliged to call to get a self.logger...
         self.setup_with_file('cfg/cfg_default.cfg')
         self.assertTrue(self.conf_is_correct)

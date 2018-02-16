@@ -27,6 +27,7 @@ import json
 import time
 import Queue
 import logging
+import psutil
 from logging import Formatter
 from logging.handlers import TimedRotatingFileHandler
 from logging.config import dictConfig as logger_dictConfig
@@ -488,7 +489,41 @@ class MonitoringLogsCollector(BaseModule):
                 # logger.debug("No message in the module queue")
                 time.sleep(0.1)
 
-        logger.info("stopping...")
+                if self.daemon_monitoring and (self.loop_count % self.daemon_monitoring_period == 1):
+                    perfdatas = []
+                    my_process = psutil.Process()
+                    with my_process.oneshot():
+                        perfdatas.append("num_threads=%d" % my_process.num_threads())
+                        self.statsmgr.counter("num_threads", my_process.num_threads())
+                        # perfdatas.append("num_ctx_switches=%d" % my_process.num_ctx_switches())
+                        perfdatas.append("num_fds=%d" % my_process.num_fds())
+                        # perfdatas.append("num_handles=%d" % my_process.num_handles())
+                        perfdatas.append("create_time=%d" % my_process.create_time())
+                        perfdatas.append("cpu_num=%d" % my_process.cpu_num())
+                        self.statsmgr.counter("cpu_num", my_process.cpu_num())
+                        perfdatas.append("cpu_usable=%d" % len(my_process.cpu_affinity()))
+                        self.statsmgr.counter("cpu_usable", len(my_process.cpu_affinity()))
+                        perfdatas.append("cpu_percent=%.2f%%" % my_process.cpu_percent())
+                        self.statsmgr.counter("cpu_percent", my_process.cpu_percent())
+
+                        cpu_times_percent = my_process.cpu_times()
+                        for key in cpu_times_percent._fields:
+                            perfdatas.append("cpu_%s_time=%.2fs" % (key,
+                                                                    getattr(cpu_times_percent, key)))
+                            self.statsmgr.counter("cpu_%s_time" % key, getattr(cpu_times_percent, key))
+
+                        memory = my_process.memory_full_info()
+                        for key in memory._fields:
+                            perfdatas.append("mem_%s=%db" % (key, getattr(memory, key)))
+                            self.statsmgr.counter("mem_%s" % key, getattr(memory, key))
+
+                        logger.debug("Daemon %s (%s), pid=%s, ppid=%s, status=%s, cpu/memory|%s",
+                                     self.name, my_process.name(), my_process.pid, my_process.ppid(),
+                                     my_process.status(), " ".join(perfdatas))
+
+
+
+    logger.info("stopping...")
 
         # Properly close all the Python logging stuff
         # fixme: this seems to make the alignak daemon hung when shutting down...
