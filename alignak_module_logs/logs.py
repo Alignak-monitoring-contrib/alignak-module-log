@@ -523,7 +523,7 @@ class MonitoringLogsCollector(BaseModule):
 
 
 
-    logger.info("stopping...")
+        logger.info("stopping...")
 
         # Properly close all the Python logging stuff
         # fixme: this seems to make the alignak daemon hung when shutting down...
