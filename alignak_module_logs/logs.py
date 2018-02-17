@@ -489,7 +489,8 @@ class MonitoringLogsCollector(BaseModule):
                 # logger.debug("No message in the module queue")
                 time.sleep(0.1)
 
-                if self.daemon_monitoring and (self.loop_count % self.daemon_monitoring_period == 1):
+                if self.daemon_monitoring and (self.loop_count
+                                                   % self.daemon_monitoring_period == 1):
                     perfdatas = []
                     my_process = psutil.Process()
                     with my_process.oneshot():
@@ -508,9 +509,10 @@ class MonitoringLogsCollector(BaseModule):
 
                         cpu_times_percent = my_process.cpu_times()
                         for key in cpu_times_percent._fields:
-                            perfdatas.append("cpu_%s_time=%.2fs" % (key,
-                                                                    getattr(cpu_times_percent, key)))
-                            self.statsmgr.counter("cpu_%s_time" % key, getattr(cpu_times_percent, key))
+                            perfdatas.append("cpu_%s_time=%.2fs"
+                                             % (key, getattr(cpu_times_percent, key)))
+                            self.statsmgr.counter("cpu_%s_time" % key,
+                                                  getattr(cpu_times_percent, key))
 
                         memory = my_process.memory_full_info()
                         for key in memory._fields:
@@ -518,7 +520,8 @@ class MonitoringLogsCollector(BaseModule):
                             self.statsmgr.counter("mem_%s" % key, getattr(memory, key))
 
                         logger.debug("Daemon %s (%s), pid=%s, ppid=%s, status=%s, cpu/memory|%s",
-                                     self.name, my_process.name(), my_process.pid, my_process.ppid(),
+                                     self.name, my_process.name(),
+                                     my_process.pid, my_process.ppid(),
                                      my_process.status(), " ".join(perfdatas))
 
 
