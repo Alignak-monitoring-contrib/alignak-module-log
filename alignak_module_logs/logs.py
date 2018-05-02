@@ -96,6 +96,20 @@ class MonitoringLogsCollector(BaseModule):
         # Internal logger for the monitoring logs
         self.logger = None
 
+        # Self daemon monitoring (cpu, memory)
+        self.daemon_monitoring = False
+        self.daemon_monitoring_period = 10
+        if 'ALIGNAK_DAEMON_MONITORING' in os.environ:
+            self.daemon_monitoring = True
+            try:
+                self.daemon_monitoring_period = \
+                    int(os.environ.get('ALIGNAK_DAEMON_MONITORING', '10'))
+            except ValueError:  # pragma: no cover, simple protection
+                pass
+        if self.daemon_monitoring:
+            print("Module self monitoring is enabled, reporting every %d loop count."
+                  % self.daemon_monitoring_period)
+
         # Logger configuration file
         self.logger_configuration = os.getenv('ALIGNAK_MONITORING_LOGS_CFG', None)
         if not self.logger_configuration:
@@ -469,7 +483,12 @@ class MonitoringLogsCollector(BaseModule):
 
         logger.info("starting...")
 
+        # Increased on each loop turn
+        self.loop_count = 0
+
         while not self.interrupted:
+            # Increment loop count
+            self.loop_count += 1
             try:
                 queue_size = self.to_q.qsize()
                 if queue_size:
