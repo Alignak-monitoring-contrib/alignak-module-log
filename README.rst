@@ -1,6 +1,9 @@
 Alignak Log Module
 ==================
 
+**Note** that this module is almost no more useful with the most recent (> 2) version of Alignak.
+-----
+
 *Alignak module for the monitoring logs*
 
 .. image:: https://travis-ci.org/Alignak-monitoring-contrib/alignak-module-logs.svg?branch=develop
