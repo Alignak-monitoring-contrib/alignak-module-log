@@ -1,5 +1,6 @@
 # Python requirements for unit tests
 -r ../requirements.txt
+
 # alignak
 -e git+https://github.com/Alignak-monitoring/alignak.git@develop#egg=alignak
 
@@ -8,6 +9,8 @@
 
 # alignak backend import
 -e git+https://github.com/Alignak-monitoring-contrib/alignak-backend-import.git@develop#egg=alignak-backend-import
+
+uwsgi
 
 unittest2
 
