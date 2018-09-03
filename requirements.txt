@@ -1,2 +1,5 @@
+# Needing six for python 2.7/3 compatibility
+six
+
 # Nothing special
 alignak_backend_client

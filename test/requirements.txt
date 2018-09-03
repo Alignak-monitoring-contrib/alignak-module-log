@@ -10,9 +10,14 @@
 # alignak backend import
 -e git+https://github.com/Alignak-monitoring-contrib/alignak-backend-import.git@develop#egg=alignak-backend-import
 
-uwsgi
-
 unittest2
+requests_mock
+
+# Tests time freeze
+freezegun
+
+# System monitor
+psutil
 
 # Use py.test as test-runner
 pytest
@@ -26,3 +31,6 @@ coveralls
 pylint
 pycodestyle
 pep257
+
+# UWSGI Pyphton Web application server
+uwsgi

@@ -42,6 +42,7 @@
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+
 from alignak_test import AlignakTest
 from alignak_module_logs.logevent import LogEvent
 

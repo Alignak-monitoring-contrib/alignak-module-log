@@ -31,6 +31,6 @@
 
     "root": {
         "level": "INFO",
-        "handlers": ["console", "rotating_file_handler", "timed_rotating_file_handler"]
+        "handlers": ["rotating_file_handler", "timed_rotating_file_handler"],
     }
 }
