@@ -13,6 +13,13 @@
 uwsgi
 
 unittest2
+requests_mock
+
+# Tests time freeze
+freezegun
+
+# System monitor
+psutil
 
 # Use py.test as test-runner
 pytest
@@ -26,3 +33,6 @@ coveralls
 pylint
 pycodestyle
 pep257
+
+# UWSGI Pyphton Web application server
+uwsgi

@@ -25,11 +25,13 @@ them to a Python logger configured in the module configuration file
 import os
 import json
 import time
-import Queue
+import queue
 import logging
 from logging import Formatter
 from logging.handlers import TimedRotatingFileHandler
 from logging.config import dictConfig as logger_dictConfig
+
+import psutil
 
 from alignak.stats import Stats
 from alignak.basemodule import BaseModule
@@ -95,6 +97,22 @@ class MonitoringLogsCollector(BaseModule):
         # Internal logger for the monitoring logs
         self.logger = None
 
+        self.loop_count = 0
+
+        # Self daemon monitoring (cpu, memory)
+        self.daemon_monitoring = False
+        self.daemon_monitoring_period = 10
+        if 'ALIGNAK_DAEMON_MONITORING' in os.environ:
+            self.daemon_monitoring = True
+            try:
+                self.daemon_monitoring_period = \
+                    int(os.environ.get('ALIGNAK_DAEMON_MONITORING', '10'))
+            except ValueError:  # pragma: no cover, simple protection
+                pass
+        if self.daemon_monitoring:
+            print("Module self monitoring is enabled, reporting every %d loop count."
+                  % self.daemon_monitoring_period)
+
         # Logger configuration file
         self.logger_configuration = os.getenv('ALIGNAK_MONITORING_LOGS_CFG', None)
         if not self.logger_configuration:
@@ -107,6 +125,8 @@ class MonitoringLogsCollector(BaseModule):
         self.default_configuration = True
         self.log_logger_name = getattr(mod_conf, 'log_logger_name', 'monitoring-logs')
         self.log_dir = getattr(mod_conf, 'log_dir', '/tmp')
+        if "ALIGNAKLOG" in self.log_dir:
+            self.log_dir = '/tmp'
         self.log_file = getattr(mod_conf, 'log_file', 'monitoring-logs.log')
         self.log_filename = os.path.join(self.log_dir, self.log_file)
         self.log_rotation_when = getattr(mod_conf, 'log_rotation_when', 'midnight')
@@ -122,8 +142,7 @@ class MonitoringLogsCollector(BaseModule):
             logger.info("The logging feature is disabled")
         else:
             if self.logger_configuration:
-                logger.info("logger configuration defined in %s",
-                            self.logger_configuration)
+                logger.info("logger configuration defined in %s", self.logger_configuration)
                 self.default_configuration = False
                 if not os.path.exists(self.logger_configuration):
                     self.default_configuration = True
@@ -140,17 +159,39 @@ class MonitoringLogsCollector(BaseModule):
 
             self.setup_logging()
 
-        logger.info("StatsD configuration: %s:%s, prefix: %s, enabled: %s",
-                    getattr(mod_conf, 'statsd_host', 'localhost'),
-                    int(getattr(mod_conf, 'statsd_port', '8125')),
-                    getattr(mod_conf, 'statsd_prefix', 'alignak'),
-                    (getattr(mod_conf, 'statsd_enabled', '0') != '0'))
+        stats_host = getattr(mod_conf, 'statsd_host', 'localhost')
+        stats_port = int(getattr(mod_conf, 'statsd_port', '8125'))
+        stats_prefix = getattr(mod_conf, 'statsd_prefix', 'alignak')
+        statsd_enabled = (getattr(mod_conf, 'statsd_enabled', '0') != '0')
+        if isinstance(getattr(mod_conf, 'statsd_enabled', '0'), bool):
+            statsd_enabled = getattr(mod_conf, 'statsd_enabled')
+        graphite_enabled = (getattr(mod_conf, 'graphite_enabled', '0') != '0')
+        if isinstance(getattr(mod_conf, 'graphite_enabled', '0'), bool):
+            graphite_enabled = getattr(mod_conf, 'graphite_enabled')
+        logger.info("StatsD configuration: %s:%s, prefix: %s, enabled: %s, graphite: %s",
+                    stats_host, stats_port, stats_prefix, statsd_enabled, graphite_enabled)
+
         self.statsmgr = Stats()
-        self.statsmgr.register(self.alias, 'module',
-                               statsd_host=getattr(mod_conf, 'statsd_host', 'localhost'),
-                               statsd_port=int(getattr(mod_conf, 'statsd_port', '8125')),
-                               statsd_prefix=getattr(mod_conf, 'statsd_prefix', 'alignak'),
-                               statsd_enabled=(getattr(mod_conf, 'statsd_enabled', '0') != '0'))
+        # Configure our Stats manager
+        if not graphite_enabled:
+            self.statsmgr.register(self.alias, 'module',
+                                   statsd_host=stats_host, statsd_port=stats_port,
+                                   statsd_prefix=stats_prefix, statsd_enabled=statsd_enabled)
+        else:
+            self.statsmgr.connect(self.alias, 'module',
+                                  host=stats_host, port=stats_port,
+                                  prefix=stats_prefix, enabled=True)
+        # logger.info("StatsD configuration: %s:%s, prefix: %s, enabled: %s",
+        #             getattr(mod_conf, 'statsd_host', 'localhost'),
+        #             int(getattr(mod_conf, 'statsd_port', '8125')),
+        #             getattr(mod_conf, 'statsd_prefix', 'alignak'),
+        #             (getattr(mod_conf, 'statsd_enabled', '0') != '0'))
+        # self.statsmgr = Stats()
+        # self.statsmgr.register(self.alias, 'module',
+        #                        statsd_host=getattr(mod_conf, 'statsd_host', 'localhost'),
+        #                        statsd_port=int(getattr(mod_conf, 'statsd_port', '8125')),
+        #                        statsd_prefix=getattr(mod_conf, 'statsd_prefix', 'alignak'),
+        #                        statsd_enabled=(getattr(mod_conf, 'statsd_enabled', '0') != '0'))
 
         # Alignak Backend part
         # ---
@@ -219,7 +260,10 @@ class MonitoringLogsCollector(BaseModule):
 
             logger.debug("Logger (default) handlers: %s", self.logger.handlers)
             if not self.logger.handlers:
-                file_handler = TimedRotatingFileHandler(self.log_filename,
+                print("Log dir: %s" % self.log_dir)
+                print("Log filename: %s" % self.log_filename)
+                file_handler = TimedRotatingFileHandler(self.log_filename.replace("ALIGNAKLOG",
+                                                                                  self.log_dir),
                                                         when=self.log_rotation_when,
                                                         interval=self.log_rotation_interval,
                                                         backupCount=self.log_rotation_count)
@@ -227,14 +271,15 @@ class MonitoringLogsCollector(BaseModule):
                 self.logger.addHandler(file_handler)
                 logger.debug("Logger (default), added a TimedRotatingFileHandler")
         else:
-            with open(self.logger_configuration, 'rt') as my_logger_configuration_file:
-                config = json.load(my_logger_configuration_file)
-                # Update the declared log file names with the log directory
-                for hdlr in config['handlers']:
-                    if 'filename' in config['handlers'][hdlr]:
-                        config['handlers'][hdlr]['filename'] = \
-                            config['handlers'][hdlr]['filename'].replace("%(logdir)s", self.log_dir)
             try:
+                with open(self.logger_configuration, 'rt') as my_logger_configuration_file:
+                    config = json.load(my_logger_configuration_file)
+                    # Update the declared log file names with the log directory
+                    for hdlr in config['handlers']:
+                        if 'filename' in config['handlers'][hdlr]:
+                            config['handlers'][hdlr]['filename'] = \
+                                config['handlers'][hdlr]['filename'].replace("ALIGNAKLOG",
+                                                                             self.log_dir)
                 logger_dictConfig(config)
             except ValueError as exp:
                 logger.error("Logger configuration file is not parsable correctly!")
@@ -468,7 +513,12 @@ class MonitoringLogsCollector(BaseModule):
 
         logger.info("starting...")
 
+        # Increased on each loop turn
+        self.loop_count = 0
+
         while not self.interrupted:
+            # Increment loop count
+            self.loop_count += 1
             try:
                 queue_size = self.to_q.qsize()
                 if queue_size:
@@ -484,15 +534,48 @@ class MonitoringLogsCollector(BaseModule):
 
                 logger.debug("time to manage %s broks (%d secs)", len(message), time.time() - start)
                 self.statsmgr.timer('managed-broks-time', time.time() - start)
-            except Queue.Empty:
+            except queue.Empty:
                 # logger.debug("No message in the module queue")
                 time.sleep(0.1)
+
+                if self.daemon_monitoring and (self.loop_count
+                                               % self.daemon_monitoring_period == 1):
+                    perfdatas = []
+                    my_process = psutil.Process()
+                    with my_process.oneshot():
+                        perfdatas.append("num_threads=%d" % my_process.num_threads())
+                        self.statsmgr.counter("num_threads", my_process.num_threads())
+                        # perfdatas.append("num_ctx_switches=%d" % my_process.num_ctx_switches())
+                        perfdatas.append("num_fds=%d" % my_process.num_fds())
+                        # perfdatas.append("num_handles=%d" % my_process.num_handles())
+                        perfdatas.append("create_time=%d" % my_process.create_time())
+                        perfdatas.append("cpu_num=%d" % my_process.cpu_num())
+                        self.statsmgr.counter("cpu_num", my_process.cpu_num())
+                        perfdatas.append("cpu_usable=%d" % len(my_process.cpu_affinity()))
+                        self.statsmgr.counter("cpu_usable", len(my_process.cpu_affinity()))
+                        perfdatas.append("cpu_percent=%.2f%%" % my_process.cpu_percent())
+                        self.statsmgr.counter("cpu_percent", my_process.cpu_percent())
+
+                        cpu_times_percent = my_process.cpu_times()
+                        for key in cpu_times_percent._fields:
+                            perfdatas.append("cpu_%s_time=%.2fs"
+                                             % (key, getattr(cpu_times_percent, key)))
+                            self.statsmgr.counter("cpu_%s_time" % key,
+                                                  getattr(cpu_times_percent, key))
+
+                        memory = my_process.memory_full_info()
+                        for key in memory._fields:
+                            perfdatas.append("mem_%s=%db" % (key, getattr(memory, key)))
+                            self.statsmgr.counter("mem_%s" % key, getattr(memory, key))
+
+                        logger.debug("Daemon %s (%s), pid=%s, ppid=%s, status=%s, cpu/memory|%s",
+                                     self.name, my_process.name(),
+                                     my_process.pid, my_process.ppid(),
+                                     my_process.status(), " ".join(perfdatas))
 
         logger.info("stopping...")
 
         # Properly close all the Python logging stuff
-        # fixme: this seems to make the alignak daemon hung when shutting down...
-        # probably because it is running as a daemon.
         # See: http://stackoverflow.com/questions/24816456/python-logging-wont-shutdown
         logging.shutdown()
 

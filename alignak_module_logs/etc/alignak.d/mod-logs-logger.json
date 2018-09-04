@@ -19,29 +19,28 @@
             "class": "logging.handlers.RotatingFileHandler",
             "level": "INFO",
             "formatter": "local",
-            "filename": "./logs3/rotating-monitoring.log",
-            "maxBytes": 10485760,
-            "backupCount": 20,
+            "filename": "ALIGNAKLOG/rotating-monitoring.log",
+            "backupCount": 7,
             "encoding": "utf8"
         },
         "timed_rotating_file_handler": {
             "class": "logging.handlers.TimedRotatingFileHandler",
             "level": "INFO",
             "formatter": "local",
-            "filename": "./logs3/timed-rotating-monitoring.log",
+            "filename": "ALIGNAKLOG/timed-rotating-monitoring.log",
             "when": "midnight",
             "interval": 1,
-            "backupCount": 20,
+            "backupCount": 7,
             "encoding": "utf8"
         },
         "monitoring_logs": {
             "class": "logging.handlers.TimedRotatingFileHandler",
             "level": "INFO",
             "formatter": "local",
-            "filename": "./logs3/monitoring-logs.log",
+            "filename": "ALIGNAKLOG/monitoring-logs.log",
             "when": "midnight",
             "interval": 1,
-            "backupCount": 30,
+            "backupCount": 365,
             "encoding": "utf8"
         }
     },
@@ -56,6 +55,6 @@
 
     "root": {
         "level": "INFO",
-        "handlers": ["rotating_file_handler", "timed_rotating_file_handler"]
+        "handlers": ["console"]
     }
 }
