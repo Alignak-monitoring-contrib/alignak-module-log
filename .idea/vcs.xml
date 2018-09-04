@@ -2,5 +2,11 @@
 <project version="4">
   <component name="VcsDirectoryMappings">
     <mapping directory="$PROJECT_DIR$" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/python27/src/alignak" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/python27/src/alignak-backend" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/python27/src/alignak-backend-import" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/python36/src/alignak" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/python36/src/alignak-backend" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/python36/src/alignak-backend-import" vcs="Git" />
   </component>
 </project>

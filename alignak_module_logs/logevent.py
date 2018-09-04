@@ -263,7 +263,7 @@ EVENT_TYPES = {
 }
 
 
-class LogEvent(object):  # pylint: disable=too-few-public-methods
+class LogEvent(object):  # pylint: disable=too-few-public-methods, useless-object-inheritance
     """Class for parsing event logs
     Populates self.data with the log type's properties
     """
